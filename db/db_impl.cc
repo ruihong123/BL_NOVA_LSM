@@ -40,6 +40,7 @@
 #include "subrange_manager.h"
 #include "compaction.h"
 #include "ltc/storage_selector.h"
+#include "common/nova_config.h"
 
 namespace leveldb {
     namespace {
