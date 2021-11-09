@@ -86,8 +86,8 @@ endif (BUILD_SHARED_LIBS)
 
 # Must be included before CMAKE_INSTALL_INCLUDEDIR is used.
 include(GNUInstallDirs)
-#add_library(nova_config common/nova_config.h
-#        common/nova_config.cc)
+add_library(nova_config common/nova_config.h
+        common/nova_config.cc)
 
 add_library(leveldb "" novalsm/lsm_tree_cleaner.cpp novalsm/lsm_tree_cleaner.h db/flush_order.cpp db/flush_order.h)
 target_sources(leveldb
@@ -418,7 +418,7 @@ function(TimberSaw_benchmark bench_file)
             "${bench_file}"
 
             )
-    target_link_libraries("${bench_target_name}" leveldb)
+    target_link_libraries("${bench_target_name}" leveldb nova_config)
     target_compile_definitions("${bench_target_name}"
             PRIVATE
             ${LEVELDB_PLATFORM_NAME}=1
