@@ -11,7 +11,7 @@ add_compile_options(-fexceptions)
 
 #set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_COMPILER /usr/bin/g++)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if (WIN32)
@@ -72,6 +72,10 @@ configure_file(
 
 include_directories(
         "${PROJECT_BINARY_DIR}/include"
+        "${PROJECT_BINARY_DIR}/db"
+        "${PROJECT_BINARY_DIR}/port"
+        "${PROJECT_BINARY_DIR}/util"
+        "${PROJECT_BINARY_DIR}/common"
         "."
 )
 
@@ -82,14 +86,17 @@ endif (BUILD_SHARED_LIBS)
 
 # Must be included before CMAKE_INSTALL_INCLUDEDIR is used.
 include(GNUInstallDirs)
+add_library(nova_config common/nova_config.h
+        common/nova_config.cc)
 
 add_library(leveldb "" novalsm/lsm_tree_cleaner.cpp novalsm/lsm_tree_cleaner.h db/flush_order.cpp db/flush_order.h)
 target_sources(leveldb
         PRIVATE
+        common/nova_config.h
+        common/nova_config.cc
         "${PROJECT_BINARY_DIR}/${LEVELDB_PORT_CONFIG_DIR}/port_config.h"
         include/leveldb/stoc_client.h
         include/leveldb/db_types.h
-
         novalsm/rdma_admission_ctrl.cpp
         novalsm/rdma_admission_ctrl.h
         db/lookup_index.cpp
@@ -181,13 +188,10 @@ target_sources(leveldb
         "ltc/stoc_client_impl.h"
         "novalsm/rdma_server.cpp"
         "novalsm/rdma_server.h"
-
-
         "util/testharness.cc"
         "util/testharness.h"
         "util/testutil.cc"
         "util/testutil.h"
-
         db/range_index.cpp
         db/range_index.h
         ltc/db_migration.cpp
@@ -196,7 +200,6 @@ target_sources(leveldb
         log/log_recovery.h
         ltc/db_helper.cpp
         ltc/db_helper.h
-
         stoc/persistent_stoc_file.cpp
         stoc/persistent_stoc_file.h
         bench_memtable/memtable_worker.cpp
@@ -215,8 +218,7 @@ target_sources(leveldb
         rdma/rdma_ctrl.hpp
         rdma/rdma_ctrl_impl.hpp
         rdma/rnic.hpp
-        common/nova_config.h
-        common/nova_config.cc
+
         rdma/nova_msg_parser.h
         novalsm/nic_server.cpp
         novalsm/nic_server.h
@@ -232,7 +234,6 @@ target_sources(leveldb
         common/nova_mem_manager.cpp
         common/nova_chained_hashtable.cpp
         common/nova_chained_hashtable.h
-
         log/stoc_log_manager.cpp
         log/stoc_log_manager.h
         log/logc_log_writer.cc
@@ -364,7 +365,10 @@ function(find_static_library LIB_NAME OUT)
     set(${OUT} ${ABS_FILE} PARENT_SCOPE)
 
 endfunction()
-
+#configure_file(
+#        "port/port_config.h.in"
+#        "${PROJECT_BINARY_DIR}/${TimberSaw_PORT_CONFIG_DIR}/port_config.h"
+#)
 find_static_library(gflags GFLAGS)
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
@@ -400,3 +404,41 @@ target_link_libraries(bloom_test -lgflags leveldb)
 
 add_executable(filter_block_test "table/filter_block_test.cc")
 target_link_libraries(filter_block_test -lgflags leveldb)
+
+function(TimberSaw_benchmark bench_file)
+    get_filename_component(bench_target_name "${bench_file}" NAME_WE)
+
+    add_executable("${bench_target_name}" "")
+    target_sources("${bench_target_name}"
+            PRIVATE
+            "util/histogram.cc"
+            "util/histogram.h"
+            "util/testutil.cc"
+            "util/testutil.h"
+            "${bench_file}"
+
+            )
+    target_link_libraries("${bench_target_name}" leveldb nova_config)
+    target_compile_definitions("${bench_target_name}"
+            PRIVATE
+            ${LEVELDB_PLATFORM_NAME}=1
+            )
+    if (NOT HAVE_CXX17_HAS_INCLUDE)
+        target_compile_definitions("${bench_target_name}"
+                PRIVATE
+                LEVELDB_HAS_PORT_CONFIG_H=1
+                )
+    endif(NOT HAVE_CXX17_HAS_INCLUDE)
+endfunction(TimberSaw_benchmark)
+#add_executable(db_bench "benchmarks/db_bench.cc")
+#
+#target_link_libraries(db_bench leveldb)
+#target_sources(db_bench
+#        PRIVATE
+#        "util/histogram.cc"
+#        "util/histogram.h"
+#        "util/testutil.cc"
+#        "util/testutil.h"
+#        "${bench_file}"
+#        )
+TimberSaw_benchmark("benchmarks/db_bench.cc")
