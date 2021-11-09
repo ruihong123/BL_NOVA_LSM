@@ -10,6 +10,8 @@
 #include <atomic>
 #include <cstdio>
 #include <cstdlib>
+#include <ltc/storage_selector.h>
+#include <db/version_set.h>
 //#include "common/nova_config.h"
 #include "leveldb/cache.h"
 #include "db/table_cache.h"
@@ -129,7 +131,13 @@ static bool FLAGS_reuse_logs = false;
 
 // Use the db with the following name.
 static const char* FLAGS_db = nullptr;
-
+nova::NovaConfig *nova::NovaConfig::config = nullptr;
+std::atomic_int_fast32_t leveldb::EnvBGThread::bg_flush_memtable_thread_id_seq = 0;
+std::atomic_int_fast32_t leveldb::EnvBGThread::bg_compaction_thread_id_seq = 0;
+nova::NovaGlobalVariables nova::NovaGlobalVariables::global;
+std::atomic<nova::Servers *> leveldb::StorageSelector::available_stoc_servers;
+std::unordered_map<uint64_t, leveldb::FileMetaData *> leveldb::Version::last_fnfile;
+std::atomic_int_fast32_t leveldb::StorageSelector::stoc_for_compaction_seq_id;
 namespace leveldb {
 
     namespace {

@@ -75,7 +75,7 @@ namespace {
     }
 }
 
-nova::NovaGlobalVariables nova::NovaGlobalVariables::global;
+//nova::NovaGlobalVariables nova::NovaGlobalVariables::global;
 
 int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -94,34 +94,6 @@ int main(int argc, char *argv[]) {
     for (const auto &flag : flags) {
         printf("%s=%s\n", flag.name.c_str(),
                flag.current_value.c_str());
-    }
-    {
-//        leveldb::DB* db;
-//        leveldb::Options options;
-//        options.comparator = leveldb::BytewiseComparator();
-        //TODO: implement the FIlter policy before initial the database
-
-//        leveldb::Status s = leveldb::DB::Open(options, "mem_leak", &db);
-//        delete db;
-////  DestroyDB("mem_leak", leveldb::Options());
-//        leveldb::DB::Open(options, "mem_leak", &db);
-//        std::string value;
-//        std::string key;
-//        auto option_wr = leveldb::WriteOptions();
-//        for (int i = 0; i<1000000; i++){
-//            key = std::to_string(i);
-//            key.insert(0, 20 - key.length(), '1');
-//            value = std::to_string(std::rand() % ( 10000000 ));
-//            value.insert(0, 400 - value.length(), '1');
-//            s = db->Put(option_wr, key, value);
-//            if (!s.ok()){
-//                std::cerr << s.ToString() << std::endl;
-//            }
-//
-//            //     std::cout << "iteration number " << i << std::endl;
-//        }
-//
-//        delete db;
     }
 
     RdmaCtrl *rdma_ctrl = new RdmaCtrl(FLAGS_server_id,

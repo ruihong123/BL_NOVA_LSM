@@ -3,7 +3,7 @@
 # found in the LICENSE file. See the AUTHORS file for names of contributors.
 
 cmake_minimum_required(VERSION 3.9)
-cmake_policy(SET CMP0076 NEW)
+#cmake_policy(SET CMP0076 NEW)
 # Keep the version below in sync with the one in db.h
 project(leveldb VERSION 1.22.0 LANGUAGES C CXX)
 
@@ -90,9 +90,9 @@ include(GNUInstallDirs)
 #add_library(nova_config common/nova_config.h
 #        common/nova_config.cc common/nova_common.h common/nova_common.cpp)
 
-add_library(leveldb "" novalsm/lsm_tree_cleaner.cpp novalsm/lsm_tree_cleaner.h db/flush_order.cpp db/flush_order.h)
+add_library(leveldb "" )
 target_sources(leveldb
-        PUBLIC
+        PRIVATE
         "${PROJECT_BINARY_DIR}/${LEVELDB_PORT_CONFIG_DIR}/port_config.h"
         include/leveldb/stoc_client.h
         include/leveldb/db_types.h
@@ -208,8 +208,7 @@ target_sources(leveldb
         common/city_hash.h
         common/city_hash.cpp
         common/nova_common.cpp
-        common/nova_common.h
-        common/nova_config.h
+
         common/nova_config.cc
         common/nova_mem_manager.h
         common/nova_mem_manager.cpp
@@ -265,7 +264,7 @@ target_sources(leveldb
         util/scrambled_zipfian_generator.h
         util/skewed_latest_generator.h
         util/utils.h
-
+        novalsm/lsm_tree_cleaner.cpp novalsm/lsm_tree_cleaner.h db/flush_order.cpp db/flush_order.h
         # Only CMake 3.3+ supports PUBLIC sources in targets exported by "install".
         $<$<VERSION_GREATER:CMAKE_VERSION,3.2>:PUBLIC>
         "${LEVELDB_PUBLIC_INCLUDE_DIR}/c.h"
@@ -283,6 +282,8 @@ target_sources(leveldb
         "${LEVELDB_PUBLIC_INCLUDE_DIR}/table.h"
         "${LEVELDB_PUBLIC_INCLUDE_DIR}/write_batch.h"
         "${LEVELDB_PUBLIC_INCLUDE_DIR}/env_bg_thread.h"
+        common/nova_common.h
+        common/nova_config.h
         )
 
 if (WIN32)
