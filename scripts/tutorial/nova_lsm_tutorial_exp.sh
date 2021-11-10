@@ -141,7 +141,7 @@ function run_bench() {
 	ltc_config_path="$config_dir/nova-tutorial-config"
 	
 	db_path="/db/nova-db-$recordcount-$value_size"
-	echo "$nova_servers $ltc_config_path $db_path"
+	echo "All servers are $nova_servers $ltc_config_path $db_path"
 	echo "cc servers $nova_all_servers"
 	if [[ $dryrun == "true" ]]; then
 		return

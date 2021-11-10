@@ -132,7 +132,7 @@ function run_bench() {
 	ltc_config_path="$config_dir/nova-shared-nrecords-$recordcount-nltc-$number_of_ltcs-nstoc-$number_of_stocs-nranges-$cc_nranges_per_server-zipfian-0.00-read-1"
 
 	db_path="/db/nova-db-$recordcount-$value_size"
-	echo "$nova_servers $ltc_config_path $db_path"
+	echo "all servers $nova_servers $ltc_config_path $db_path"
 	echo "cc servers $nova_all_servers"
 	if [[ $dryrun == "true" ]]; then
 		return
