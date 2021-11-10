@@ -1,5 +1,5 @@
 #!/bin/bash
-home_dir="/proj/bg-PG0/haoyu"
+home_dir="/scratch1/wang4996/temp/"
 # home_dir="/proj/BG/haoyu"
 config_dir="$home_dir/config"
 db_dir="$home_dir/db"
