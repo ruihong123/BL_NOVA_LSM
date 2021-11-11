@@ -169,24 +169,25 @@ DEFINE_bool(use_ordered_flush, false, "use ordered flush");
 //      stats       -- Print DB stats
 //      sstables    -- Print sstable info
 //      heapprofile -- Dump a heap profile (if supported by this port)
-static const char* FLAGS_benchmarks =
-        "fillseq,"
-        "fillsync,"
-        "fillrandom,"
-        "overwrite,"
-        "readrandom,"
-        "readrandom,"  // Extra run to allow previous compactions to quiesce
-        "readseq,"
-        "readreverse,"
-        "compact,"
-        "readrandom,"
-        "readseq,"
-        "readreverse,"
-        "fill100K,"
-        "crc32c,"
-        "snappycomp,"
-        "snappyuncomp,";
-
+//static const char* FLAGS_benchmarks =
+//        "fillseq,"
+//        "fillsync,"
+//        "fillrandom,"
+//        "overwrite,"
+//        "readrandom,"
+//        "readrandom,"  // Extra run to allow previous compactions to quiesce
+//        "readseq,"
+//        "readreverse,"
+//        "compact,"
+//        "readrandom,"
+//        "readseq,"
+//        "readreverse,"
+//        "fill100K,"
+//        "crc32c,"
+//        "snappycomp,"
+//        "snappyuncomp,";
+DEFINE_string(benchmarks, "fillrandom,readrandom",
+             "Comma-separated list of operations to run in the specified order");
 // Number of key/values to place in database
 DEFINE_int32(num, 1000000,
               "Number of key/values to place in database");
