@@ -234,6 +234,8 @@ target_sources(leveldb
         rdma/nova_msg_parser.h
         novalsm/nic_server.cpp
         novalsm/nic_server.h
+        novalsm/local_server.cpp
+        novalsm/local_server.h
         novalsm/client_req_worker.cpp
         novalsm/client_req_worker.h
         novalsm/rdma_msg_handler.cpp
@@ -453,6 +455,6 @@ add_executable(db_bench "util/histogram.cc"
 #        PRIVATE
 #
 #        )
-target_link_libraries(db_bench leveldb)
+target_link_libraries(db_bench leveldb -lgflags)
 
 #TimberSaw_benchmark("benchmarks/db_bench.cc")

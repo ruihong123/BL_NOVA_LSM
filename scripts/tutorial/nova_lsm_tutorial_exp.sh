@@ -101,9 +101,9 @@ function run_bench() {
 		machines+=("node-$id")
 	done
 
-	echo ${clis[@]}
-	echo ${servers[@]}
-	echo ${machines[@]}
+	echo "clients are${clis[@]}"
+	echo "servers are ${servers[@]}"
+	echo "machines are ${machines[@]}"
 
 	nova_servers=""
 	nova_all_servers=""

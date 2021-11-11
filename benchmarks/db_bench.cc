@@ -6,7 +6,7 @@
 #include <numaif.h>
 #endif
 #include <sys/types.h>
-
+#include <gflags/gflags.h>
 #include <atomic>
 #include <cstdio>
 #include <cstdlib>
@@ -26,7 +26,126 @@
 #include "util/mutexlock.h"
 #include "util/random.h"
 #include "util/testutil.h"
+#include "rdma/rdma_ctrl.hpp"
+#include "common/nova_common.h"
+#include "common/nova_config.h"
+#include "novalsm/local_server.h"
+#include "novalsm/nic_server.h"
+#include "leveldb/db.h"
+#include "leveldb/comparator.h"
+#include "leveldb/env.h"
+#include "ltc/storage_selector.h"
+#include "ltc/db_migration.h"
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <gflags/gflags.h>
+#include "db/version_set.h"
+
+using namespace std;
+using namespace rdmaio;
+using namespace nova;
+
+DEFINE_string(db_path, "/tmp/db", "level db path");
+DEFINE_string(stoc_files_path, "/tmp/stoc", "StoC files path");
+
+DEFINE_string(all_servers, "localhost:11211", "A list of servers");
+DEFINE_int64(server_id, -1, "Server id.");
+DEFINE_int64(number_of_ltcs, 0, "The first n are LTCs and the rest are StoCs.");
+
+DEFINE_uint64(mem_pool_size_gb, 0, "Memory pool size in GB.");
+DEFINE_uint64(use_fixed_value_size, 0, "Fixed value size.");
+
+DEFINE_uint64(rdma_port, 0, "The port used by RDMA.");
+DEFINE_uint64(rdma_max_msg_size, 0, "The maximum message size used by RDMA.");
+DEFINE_uint64(rdma_max_num_sends, 0,
+              "The maximum number of pending RDMA sends. This includes READ/WRITE/SEND. We also post the same number of RECV events. ");
+DEFINE_uint64(rdma_doorbell_batch_size, 0, "The doorbell batch size.");
+DEFINE_bool(enable_rdma, false, "Enable RDMA.");
+DEFINE_bool(enable_load_data, false, "Enable loading data.");
+
+DEFINE_string(ltc_config_path, "/tmp/uniform-3-32-10000000-frags.txt",
+              "The path that stores the configuration.");
+DEFINE_uint64(ltc_num_client_workers, 0, "Number of client worker threads.");
+DEFINE_uint32(num_rdma_fg_workers, 0,
+              "Number of RDMA foreground worker threads.");
+DEFINE_uint32(num_compaction_workers, 0,
+              "Number of compaction worker threads.");
+DEFINE_uint32(num_rdma_bg_workers, 0,
+              "Number of RDMA background worker threads.");
+
+DEFINE_uint32(num_storage_workers, 0,
+              "Number of storage worker threads.");
+DEFINE_uint32(ltc_num_stocs_scatter_data_blocks, 0,
+              "Number of StoCs to scatter data blocks of an SSTable.");
+
+DEFINE_uint64(block_cache_mb, 0, "block cache size in mb");
+DEFINE_uint64(row_cache_mb, 0, "row cache size in mb. Not supported");
+
+DEFINE_uint32(num_memtables, 0, "Number of memtables.");
+DEFINE_uint32(num_memtable_partitions, 0,
+              "Number of memtable partitions. One active memtable per partition.");
+DEFINE_bool(enable_lookup_index, false, "Enable lookup index.");
+DEFINE_bool(enable_range_index, false, "Enable range index.");
+
+DEFINE_uint32(l0_start_compaction_mb, 0,
+              "Level-0 size to start compaction in MB.");
+DEFINE_uint32(l0_stop_write_mb, 0, "Level-0 size to stall writes in MB.");
+DEFINE_int32(level, 2, "Number of levels.");
+
+DEFINE_uint64(memtable_size_mb, 0, "memtable size in mb");
+DEFINE_uint64(sstable_size_mb, 0, "sstable size in mb");
+DEFINE_uint32(cc_log_buf_size, 0,
+              "log buffer size. Not supported. Same as memtable size.");
+DEFINE_uint32(max_stoc_file_size_mb, 0, "Max StoC file size in MB");
+DEFINE_bool(use_local_disk, false,
+            "Enable LTC to write data to its local disk.");
+DEFINE_string(scatter_policy, "random",
+              "Policy to scatter an SSTable, i.e., random/power_of_two");
+DEFINE_string(log_record_mode, "none",
+              "Policy for LogC to replicate log records, i.e., none/rdma");
+DEFINE_uint32(num_log_replicas, 0, "Number of replicas for a log record.");
+DEFINE_string(memtable_type, "", "Memtable type, i.e., pool/static_partition");
+
+DEFINE_bool(recover_dbs, false, "Enable recovery");
+DEFINE_uint32(num_recovery_threads, 32, "Number of recovery threads");
+
+DEFINE_bool(enable_subrange, false, "Enable subranges");
+DEFINE_bool(enable_subrange_reorg, false, "Enable subrange reorganization.");
+DEFINE_double(sampling_ratio, 1,
+              "Sampling ratio on memtables for subrange reorg. A value between 0 and 1.");
+DEFINE_string(zipfian_dist_ref_counts, "/tmp/zipfian",
+              "Zipfian ref count file used to report load imbalance across subranges.");
+DEFINE_string(client_access_pattern, "uniform",
+              "Client access pattern used to report load imbalance across subranges.");
+DEFINE_uint32(num_tinyranges_per_subrange, 10,
+              "Number of tiny ranges per subrange.");
+
+DEFINE_bool(enable_detailed_db_stats, false,
+            "Enable detailed stats. It will report stats such as number of overlapping SSTables between Level-0 and Level-1.");
+DEFINE_bool(enable_flush_multiple_memtables, false,
+            "Enable a compaction thread to compact mulitple memtables at the same time.");
+DEFINE_uint32(subrange_no_flush_num_keys, 100,
+              "A subrange merges memtables into new a memtable if its contained number of unique keys is less than this threshold.");
+DEFINE_string(major_compaction_type, "no",
+              "Major compaction type: i.e., no/lc/sc");
+DEFINE_uint32(major_compaction_max_parallism, 1,
+              "The maximum compaction parallelism.");
+DEFINE_uint32(major_compaction_max_tables_in_a_set, 15,
+              "The maximum number of SSTables in a compaction job.");
+DEFINE_uint32(num_sstable_replicas, 1, "Number of replicas for SSTables.");
+DEFINE_uint32(num_sstable_metadata_replicas, 1, "Number of replicas for meta blocks of SSTables.");
+DEFINE_bool(use_parity_for_sstable_data_blocks, false, "");
+DEFINE_uint32(num_manifest_replicas, 1, "Number of replicas for manifest file.");
+
+DEFINE_int32(fail_stoc_id, -1, "The StoC to fail.");
+DEFINE_int32(exp_seconds_to_fail_stoc, -1,
+             "Number of seconds elapsed to fail the stoc.");
+DEFINE_int32(failure_duration, -1, "Failure duration");
+DEFINE_int32(num_migration_threads, 1, "Number of migration threads");
+DEFINE_string(ltc_migration_policy, "base", "immediate/base");
+DEFINE_bool(use_ordered_flush, false, "use ordered flush");
 // Comma-separated list of operations to run in the specified order
 //   Actual benchmarks:
 //      fillseq       -- write N values in sequential key order in async mode
@@ -69,68 +188,102 @@ static const char* FLAGS_benchmarks =
         "snappyuncomp,";
 
 // Number of key/values to place in database
-static int FLAGS_num = 1000000;
+DEFINE_int32(num, 1000000,
+              "Number of key/values to place in database");
+//static int FLAGS_num = 1000000;
 
 // Number of read operations to do.  If negative, do FLAGS_num reads.
-static int FLAGS_reads = -1;
+DEFINE_int32(reads, -1,
+             "Number of read operations to do");
+//static int FLAGS_reads = -1;
 
 // Number of concurrent threads to run.
-static int FLAGS_threads = 1;
+DEFINE_int32(threads, 1,
+             "Number of concurrent threads to run.");
+//static int FLAGS_threads = 1;
 
-static int FLAGS_mem_num = 2;
 
 // Size of each value
-static int FLAGS_value_size = 400;
-// Size of each value
-static int FLAGS_key_size = 20;
+DEFINE_int32(value_size, 412,
+             "Size of each value");
+//static int FLAGS_value_size = 400;
+// Size of each key
+//static int FLAGS_key_size = 20;
 // Arrange to generate values that shrink to this fraction of
 // their original size after compression
-static double FLAGS_compression_ratio = 0.5;
+DEFINE_double(compression_ratio, 0.5,
+             "Arrange to generate values that shrink to this fraction of their original size after compression");
+//static double FLAGS_compression_ratio = 0.5;
 
 // Print histogram of operation timings
-static bool FLAGS_histogram = false;
+DEFINE_bool(histogram, false,
+              "Print histogram of operation timings");
+//static bool FLAGS_histogram = false;
 
 // Count the number of string comparisons performed
-static bool FLAGS_comparisons = false;
+DEFINE_bool(comparisons, false,
+            "Count the number of string comparisons performed");
+//static bool FLAGS_comparisons = false;
 
 // Number of bytes to buffer in memtable before compacting
 // (initialized to default value by "main")
-static int FLAGS_write_buffer_size = 0;
+DEFINE_int32(write_buffer_size, 0,
+            "Number of bytes to buffer in memtable before compacting");
+//static int FLAGS_write_buffer_size = 0;
 
 // Number of bytes written to each file.
 // (initialized to default value by "main")
-static int FLAGS_max_file_size = 0;
+DEFINE_int32(max_file_size, 0,
+             "Number of bytes written to each file.");
+//static int FLAGS_max_file_size = 0;
 
 // Approximate size of user data packed per block (before compression.
 // (initialized to default value by "main")
-static int FLAGS_block_size = 0;
+DEFINE_int32(block_size, 0,
+             "Approximate size of user data packed per block (before compression.");
+//static int FLAGS_block_size = 0;
 
 // Number of bytes to use as a cache of uncompressed data.
 // Negative means use default settings.
-static int FLAGS_cache_size = -1;
+DEFINE_int32(cache_size, -1,
+             "Number of bytes written to each file.");
+//static int FLAGS_cache_size = -1;
 
 // Maximum number of files to keep open at the same time (use default if == 0)
-static int FLAGS_open_files = 0;
-
-static int FLAGS_block_restart_interval = 16;
+DEFINE_int32(open_files, 0,
+             "Number of bytes written to each file.");
+//static int FLAGS_open_files = 0;
+DEFINE_int32(block_restart_interval, 16,
+             "Number of bytes written to each file.");
+//static int FLAGS_block_restart_interval = 16;
 // Bloom filter bits per key.
 // Negative means use default settings.
-static int FLAGS_bloom_bits = 10;
+DEFINE_int32(bloom_bits, 10,
+             "bloom filter bits per key.");
+//static int FLAGS_bloom_bits = 10;
 
 // Common key prefix length.
-static int FLAGS_key_prefix = 0;
+DEFINE_int32(key_prefix, 0,
+             "Common key prefix length.");
+//static int FLAGS_key_prefix = 0;
 
 // If true, do not destroy the existing database.  If you set this
 // flag and also specify a benchmark that wants a fresh database, that
 // benchmark will fail.
-static bool FLAGS_use_existing_db = false;
+DEFINE_bool(use_existing_db, false,
+             "Common key prefix length.");
+//static bool FLAGS_use_existing_db = false;
 // whether the writer threads aware of the NUMA archetecture.
-static bool FLAGS_enable_numa = false;
+DEFINE_bool(enable_numa, false,
+            "Common key prefix length.");
+//static bool FLAGS_enable_numa = false;
 // If true, reuse existing log/MANIFEST files when re-opening a database.
-static bool FLAGS_reuse_logs = false;
+//static bool FLAGS_reuse_logs = false;
 
 // Use the db with the following name.
-static const char* FLAGS_db = nullptr;
+DEFINE_string(db, "",
+            "db name.");
+//static const char* FLAGS_db = nullptr;
 nova::NovaConfig *nova::NovaConfig::config = nullptr;
 std::atomic_int_fast32_t leveldb::EnvBGThread::bg_flush_memtable_thread_id_seq = 0;
 std::atomic_int_fast32_t leveldb::EnvBGThread::bg_compaction_thread_id_seq = 0;
@@ -138,6 +291,15 @@ nova::NovaGlobalVariables nova::NovaGlobalVariables::global;
 std::atomic<nova::Servers *> leveldb::StorageSelector::available_stoc_servers;
 std::unordered_map<uint64_t, leveldb::FileMetaData *> leveldb::Version::last_fnfile;
 std::atomic_int_fast32_t leveldb::StorageSelector::stoc_for_compaction_seq_id;
+
+std::atomic_int_fast32_t nova::StorageWorker::storage_file_number_seq;
+// Sequence id to assign tasks to a thread in a round-robin manner.
+std::atomic_int_fast32_t nova::RDMAServerImpl::compaction_storage_worker_seq_id_;
+
+std::atomic_int_fast32_t nova::RDMAServerImpl::fg_storage_worker_seq_id_;
+std::atomic_int_fast32_t nova::RDMAServerImpl::bg_storage_worker_seq_id_;
+std::atomic_int_fast32_t leveldb::StoCBlockClient::rdma_worker_seq_id_;
+std::atomic_int_fast32_t nova::DBMigration::migration_seq_id_;
 namespace leveldb {
 
     namespace {
@@ -384,7 +546,197 @@ namespace leveldb {
         };
 
     }  // namespace
+    DB* StartServer() {
+        RdmaCtrl *rdma_ctrl = new RdmaCtrl(NovaConfig::config->my_server_id,
+                                           NovaConfig::config->rdma_port);
+//    if (NovaConfig::config->my_server_id < FLAGS_number_of_ltcs) {
+//        NovaConfig::config->mem_pool_size_gb = 10;
+//    }
+        int port = NovaConfig::config->servers[NovaConfig::config->my_server_id].port;
+        uint64_t nrdmatotal = nrdma_buf_server();
+        uint64_t ntotal = nrdmatotal;
+        ntotal += NovaConfig::config->mem_pool_size_gb * 1024 * 1024 * 1024;
+        NOVA_LOG(INFO) << "Allocated buffer size in bytes: " << ntotal;
 
+        auto *buf = (char *) malloc(ntotal);
+        memset(buf, 0, ntotal);
+        NovaConfig::config->nova_buf = buf;
+        NovaConfig::config->nnovabuf = ntotal;
+        NOVA_ASSERT(buf != NULL) << "Not enough memory";
+
+        if (!FLAGS_recover_dbs) {
+            int ret = system(fmt::format("exec rm -rf {}/*",
+                                         NovaConfig::config->db_path).data());
+            ret = system(fmt::format("exec rm -rf {}/*",
+                                     NovaConfig::config->stoc_files_path).data());
+        }
+        mkdirs(NovaConfig::config->stoc_files_path.data());
+        mkdirs(NovaConfig::config->db_path.data());
+//    auto *mem_server = new NICServer(rdma_ctrl, buf, port);
+        auto *mem_server = new LocalServer(rdma_ctrl, buf);
+        return mem_server->Start();
+    }
+    DB* nova_config_process_code(){
+
+        int i;
+//    const char **methods = event_get_supported_methods();
+//    printf("Starting Libevent %s.  Available methods are:\n",
+//           event_get_version());
+//    for (i = 0; methods[i] != NULL; ++i) {
+//        printf("    %s\n", methods[i]);
+//    }
+        if (FLAGS_server_id == -1) {
+            exit(0);
+        }
+        std::vector<gflags::CommandLineFlagInfo> flags;
+        gflags::GetAllFlags(&flags);
+        for (const auto &flag : flags) {
+            printf("%s=%s\n", flag.name.c_str(),
+                   flag.current_value.c_str());
+        }
+
+        NovaConfig::config = new NovaConfig;
+        NovaConfig::config->stoc_files_path = FLAGS_stoc_files_path;
+
+        NovaConfig::config->mem_pool_size_gb = FLAGS_mem_pool_size_gb;
+        NovaConfig::config->load_default_value_size = FLAGS_use_fixed_value_size;
+        // RDMA
+        NovaConfig::config->rdma_port = FLAGS_rdma_port;
+        NovaConfig::config->max_msg_size = FLAGS_rdma_max_msg_size;
+        NovaConfig::config->rdma_max_num_sends = FLAGS_rdma_max_num_sends;
+        NovaConfig::config->rdma_doorbell_batch_size = FLAGS_rdma_doorbell_batch_size;
+
+        NovaConfig::config->block_cache_mb = FLAGS_block_cache_mb;
+        NovaConfig::config->memtable_size_mb = FLAGS_memtable_size_mb;
+
+        NovaConfig::config->db_path = FLAGS_db_path;
+        NovaConfig::config->enable_rdma = FLAGS_enable_rdma;
+        NovaConfig::config->enable_load_data = FLAGS_enable_load_data;
+        NovaConfig::config->major_compaction_type = FLAGS_major_compaction_type;
+        NovaConfig::config->enable_flush_multiple_memtables = FLAGS_enable_flush_multiple_memtables;
+        NovaConfig::config->major_compaction_max_parallism = FLAGS_major_compaction_max_parallism;
+        NovaConfig::config->major_compaction_max_tables_in_a_set = FLAGS_major_compaction_max_tables_in_a_set;
+
+        NovaConfig::config->number_of_recovery_threads = FLAGS_num_recovery_threads;
+        NovaConfig::config->recover_dbs = FLAGS_recover_dbs;
+        NovaConfig::config->number_of_sstable_data_replicas = FLAGS_num_sstable_replicas;
+        NovaConfig::config->number_of_sstable_metadata_replicas = FLAGS_num_sstable_metadata_replicas;
+        NovaConfig::config->number_of_manifest_replicas = FLAGS_num_manifest_replicas;
+        NovaConfig::config->use_parity_for_sstable_data_blocks = FLAGS_use_parity_for_sstable_data_blocks;
+
+        NovaConfig::config->servers = convert_hosts(FLAGS_all_servers);
+        NovaConfig::config->my_server_id = FLAGS_server_id;
+        NovaConfig::config->num_conn_workers = FLAGS_ltc_num_client_workers;
+        NovaConfig::config->num_fg_rdma_workers = FLAGS_num_rdma_fg_workers;
+        NovaConfig::config->num_storage_workers = FLAGS_num_storage_workers;
+        NovaConfig::config->num_compaction_workers = FLAGS_num_compaction_workers;
+        NovaConfig::config->num_bg_rdma_workers = FLAGS_num_rdma_bg_workers;
+        NovaConfig::config->num_memtables = FLAGS_num_memtables;
+        NovaConfig::config->num_memtable_partitions = FLAGS_num_memtable_partitions;
+        NovaConfig::config->enable_subrange = FLAGS_enable_subrange;
+        NovaConfig::config->memtable_type = FLAGS_memtable_type;
+
+        NovaConfig::config->num_stocs_scatter_data_blocks = FLAGS_ltc_num_stocs_scatter_data_blocks;
+        NovaConfig::config->max_stoc_file_size = FLAGS_max_stoc_file_size_mb * 1024;
+        NovaConfig::config->manifest_file_size = NovaConfig::config->max_stoc_file_size * 4;
+        NovaConfig::config->sstable_size = FLAGS_sstable_size_mb * 1024 * 1024;
+        NovaConfig::config->use_local_disk = FLAGS_use_local_disk;
+        NovaConfig::config->num_tinyranges_per_subrange = FLAGS_num_tinyranges_per_subrange;
+
+        if (FLAGS_scatter_policy == "random") {
+            NovaConfig::config->scatter_policy = ScatterPolicy::RANDOM;
+        } else if (FLAGS_scatter_policy == "power_of_two") {
+            NovaConfig::config->scatter_policy = ScatterPolicy::POWER_OF_TWO;
+        } else if (FLAGS_scatter_policy == "power_of_three") {
+            NovaConfig::config->scatter_policy = ScatterPolicy::POWER_OF_THREE;
+        } else if (FLAGS_scatter_policy == "local") {
+            NovaConfig::config->scatter_policy = ScatterPolicy::LOCAL;
+            NOVA_ASSERT(NovaConfig::config->num_stocs_scatter_data_blocks == 1);
+        } else {
+            NovaConfig::config->scatter_policy = ScatterPolicy::SCATTER_DC_STATS;
+        }
+
+        if (FLAGS_log_record_mode == "none") {
+            NovaConfig::config->log_record_mode = NovaLogRecordMode::LOG_NONE;
+        } else if (FLAGS_log_record_mode == "rdma") {
+            NovaConfig::config->log_record_mode = NovaLogRecordMode::LOG_RDMA;
+        }
+
+        NovaConfig::config->enable_lookup_index = FLAGS_enable_lookup_index;
+        NovaConfig::config->enable_range_index = FLAGS_enable_range_index;
+        NovaConfig::config->subrange_sampling_ratio = FLAGS_sampling_ratio;
+        NovaConfig::config->zipfian_dist_file_path = FLAGS_zipfian_dist_ref_counts;
+        NovaConfig::config->ReadZipfianDist();
+        NovaConfig::config->client_access_pattern = FLAGS_client_access_pattern;
+        NovaConfig::config->enable_detailed_db_stats = FLAGS_enable_detailed_db_stats;
+        NovaConfig::config->subrange_num_keys_no_flush = FLAGS_subrange_no_flush_num_keys;
+        NovaConfig::config->l0_stop_write_mb = FLAGS_l0_stop_write_mb;
+        NovaConfig::config->l0_start_compaction_mb = FLAGS_l0_start_compaction_mb;
+        NovaConfig::config->level = FLAGS_level;
+        NovaConfig::config->enable_subrange_reorg = FLAGS_enable_subrange_reorg;
+        NovaConfig::config->num_migration_threads = FLAGS_num_migration_threads;
+        NovaConfig::config->use_ordered_flush = FLAGS_use_ordered_flush;
+
+        if (FLAGS_ltc_migration_policy == "immediate") {
+            NovaConfig::config->ltc_migration_policy = LTCMigrationPolicy::IMMEDIATE;
+        } else {
+            NovaConfig::config->ltc_migration_policy = LTCMigrationPolicy::PROCESS_UNTIL_MIGRATION_COMPLETE;
+        }
+
+        NovaConfig::ReadFragments(FLAGS_ltc_config_path);
+        if (FLAGS_num_log_replicas > 0) {
+            for (int i = 0; i < NovaConfig::config->cfgs.size(); i++) {
+                NOVA_ASSERT(FLAGS_num_log_replicas <= NovaConfig::config->cfgs[i]->stoc_servers.size());
+            }
+            NovaConfig::ComputeLogReplicaLocations(FLAGS_num_log_replicas);
+        }
+        NOVA_LOG(INFO) << fmt::format("{} configurations", NovaConfig::config->cfgs.size());
+        for (auto c : NovaConfig::config->cfgs) {
+            NOVA_LOG(INFO) << c->DebugString();
+        }
+
+        leveldb::EnvBGThread::bg_flush_memtable_thread_id_seq = 0;
+        leveldb::EnvBGThread::bg_compaction_thread_id_seq = 0;
+        nova::RDMAServerImpl::bg_storage_worker_seq_id_ = 0;
+        leveldb::StoCBlockClient::rdma_worker_seq_id_ = 0;
+        nova::StorageWorker::storage_file_number_seq = 0;
+        nova::RDMAServerImpl::compaction_storage_worker_seq_id_ = 0;
+        nova::DBMigration::migration_seq_id_ = 0;
+        leveldb::StorageSelector::stoc_for_compaction_seq_id = nova::NovaConfig::config->my_server_id;
+        nova::NovaGlobalVariables::global.Initialize();
+        auto available_stoc_servers = new Servers;
+        available_stoc_servers->servers = NovaConfig::config->cfgs[0]->stoc_servers;
+        for (int i = 0; i < available_stoc_servers->servers.size(); i++) {
+            available_stoc_servers->server_ids.insert(available_stoc_servers->servers[i]);
+        }
+        leveldb::StorageSelector::available_stoc_servers.store(available_stoc_servers);
+
+        // Sanity checks.
+        if (NovaConfig::config->number_of_sstable_data_replicas > 1) {
+            NOVA_ASSERT(NovaConfig::config->number_of_sstable_data_replicas ==
+                        NovaConfig::config->number_of_sstable_metadata_replicas);
+            NOVA_ASSERT(NovaConfig::config->num_stocs_scatter_data_blocks == 1);
+            NOVA_ASSERT(!NovaConfig::config->use_parity_for_sstable_data_blocks);
+        }
+
+        if (NovaConfig::config->use_parity_for_sstable_data_blocks) {
+            NOVA_ASSERT(NovaConfig::config->number_of_sstable_data_replicas == 1);
+            NOVA_ASSERT(NovaConfig::config->num_stocs_scatter_data_blocks > 1);
+            NOVA_ASSERT(NovaConfig::config->num_stocs_scatter_data_blocks +
+                        NovaConfig::config->number_of_sstable_metadata_replicas + 1 <=
+                        NovaConfig::config->cfgs[0]->stoc_servers.size());
+        }
+        for (int i = 0; i < NovaConfig::config->cfgs.size(); i++) {
+            auto cfg = NovaConfig::config->cfgs[i];
+            NOVA_ASSERT(FLAGS_ltc_num_stocs_scatter_data_blocks <= cfg->stoc_servers.size()) << fmt::format(
+                        "Not enough stoc to scatter. Scatter width: {} Num StoCs: {}",
+                        FLAGS_ltc_num_stocs_scatter_data_blocks, cfg->stoc_servers.size());
+            NOVA_ASSERT(FLAGS_num_sstable_replicas <= cfg->stoc_servers.size()) << fmt::format(
+                        "Not enough stoc to replicate sstables. Replication factor: {} Num StoCs: {}",
+                        FLAGS_num_sstable_replicas, cfg->stoc_servers.size());
+        }
+        return StartServer();
+    }
     class Benchmark {
     private:
         Cache* cache_;
@@ -510,10 +862,10 @@ namespace leveldb {
             delete filter_policy_;
         }
         Slice AllocateKey(std::unique_ptr<const char[]>* key_guard) {
-            char* data = new char[FLAGS_key_size];
+            char* data = new char[sizeof(int)];
             const char* const_data = data;
             key_guard->reset(const_data);
-            return Slice(key_guard->get(), FLAGS_key_size);
+            return Slice(key_guard->get(), sizeof(int));
         }
         Slice AllocateKey(std::unique_ptr<const char[]>* key_guard, size_t key_size) {
             char* data = new char[key_size];
@@ -521,41 +873,41 @@ namespace leveldb {
             key_guard->reset(const_data);
             return Slice(key_guard->get(), key_size);
         }
-        void GenerateKeyFromInt(uint64_t v, int64_t num_keys, Slice* key) {
-
-            char* start = const_cast<char*>(key->data());
-            char* pos = start;
-//    if (keys_per_prefix_ > 0) {
-//      int64_t num_prefix = num_keys / keys_per_prefix_;
-//      int64_t prefix = v % num_prefix;
-//      int bytes_to_fill = std::min(prefix_size_, 8);
-//      if (port::kLittleEndian) {
-//        for (int i = 0; i < bytes_to_fill; ++i) {
-//          pos[i] = (prefix >> ((bytes_to_fill - i - 1) << 3)) & 0xFF;
+//        void GenerateKeyFromInt(uint64_t v, int64_t num_keys, Slice* key) {
+//
+//            char* start = const_cast<char*>(key->data());
+//            char* pos = start;
+////    if (keys_per_prefix_ > 0) {
+////      int64_t num_prefix = num_keys / keys_per_prefix_;
+////      int64_t prefix = v % num_prefix;
+////      int bytes_to_fill = std::min(prefix_size_, 8);
+////      if (port::kLittleEndian) {
+////        for (int i = 0; i < bytes_to_fill; ++i) {
+////          pos[i] = (prefix >> ((bytes_to_fill - i - 1) << 3)) & 0xFF;
+////        }
+////      } else {
+////        memcpy(pos, static_cast<void*>(&prefix), bytes_to_fill);
+////      }
+////      if (prefix_size_ > 8) {
+////        // fill the rest with 0s
+////        memset(pos + 8, '0', prefix_size_ - 8);
+////      }
+////      pos += prefix_size_;
+////    }
+//
+//            int bytes_to_fill = std::min(FLAGS_key_size, 8);
+//            if (port::kLittleEndian) {
+//                for (int i = 0; i < bytes_to_fill; ++i) {
+//                    pos[i] = (v >> ((bytes_to_fill - i - 1) << 3)) & 0xFF;
+//                }
+//            } else {
+//                memcpy(pos, static_cast<void*>(&v), bytes_to_fill);
+//            }
+//            pos += bytes_to_fill;
+//            if (FLAGS_key_size > pos - start) {
+//                memset(pos, '0', FLAGS_key_size - (pos - start));
+//            }
 //        }
-//      } else {
-//        memcpy(pos, static_cast<void*>(&prefix), bytes_to_fill);
-//      }
-//      if (prefix_size_ > 8) {
-//        // fill the rest with 0s
-//        memset(pos + 8, '0', prefix_size_ - 8);
-//      }
-//      pos += prefix_size_;
-//    }
-
-            int bytes_to_fill = std::min(FLAGS_key_size, 8);
-            if (port::kLittleEndian) {
-                for (int i = 0; i < bytes_to_fill; ++i) {
-                    pos[i] = (v >> ((bytes_to_fill - i - 1) << 3)) & 0xFF;
-                }
-            } else {
-                memcpy(pos, static_cast<void*>(&v), bytes_to_fill);
-            }
-            pos += bytes_to_fill;
-            if (FLAGS_key_size > pos - start) {
-                memset(pos, '0', FLAGS_key_size - (pos - start));
-            }
-        }
         void Run() {
 
             PrintHeader();
@@ -864,28 +1216,13 @@ namespace leveldb {
 
         void Open() {
             assert(db_ == nullptr);
-            Options options;
-            options.env = g_env;
-            options.create_if_missing = !FLAGS_use_existing_db;
-            options.block_cache = cache_;
-            options.write_buffer_size = FLAGS_write_buffer_size;
-            options.max_file_size = FLAGS_max_file_size;
-            options.block_size = FLAGS_block_size;
-            options.num_memtable_partitions = FLAGS_threads;
-            options.num_memtables = FLAGS_mem_num;
-//            options.bloom_bits = FLAGS_bloom_bits;
-            options.block_restart_interval = FLAGS_block_restart_interval;
-            if (FLAGS_comparisons) {
-                options.comparator = &count_comparator_;
-            }
-            options.max_open_files = FLAGS_open_files;
-            options.filter_policy = filter_policy_;
-//            options.reuse_logs = FLAGS_reuse_logs;
-            Status s = DB::Open(options, FLAGS_db, &db_);
-            if (!s.ok()) {
-                std::fprintf(stderr, "open error: %s\n", s.ToString().c_str());
-                std::exit(1);
-            }
+            db_ = nova_config_process_code();
+
+//            Status s = DB::Open(options, FLAGS_db, &db_);
+//            if (!s.ok()) {
+//                std::fprintf(stderr, "open error: %s\n", s.ToString().c_str());
+//                std::exit(1);
+//            }
         }
 
         void OpenBench(ThreadState* thread) {
@@ -966,7 +1303,8 @@ namespace leveldb {
                     const int k = seq ? i + j : thread->rand.Next()%(FLAGS_num*FLAGS_threads);
 
 //        key.Set(k);
-                    GenerateKeyFromInt(k, FLAGS_num, &key);
+//                    GenerateKeyFromInt(k, FLAGS_num, &key);
+                    memcpy((void *) key.data(), (void*)(&k), sizeof(int));
 //        batch.Put(key.slice(), gen.Generate(value_size_));
                     db_->Put(write_options_, key, gen.Generate(value_size_));
 
@@ -1022,7 +1360,8 @@ namespace leveldb {
                 const int k = thread->rand.Next()%(FLAGS_num*FLAGS_threads);
 //
 //            key.Set(k);
-                GenerateKeyFromInt(k, FLAGS_num, &key);
+//                GenerateKeyFromInt(k, FLAGS_num, &key);
+                memcpy((void *) key.data(), (void*)(&k), sizeof(int));
 //      if (db_->Get(options, key.slice(), &value).ok()) {
 //        found++;
 //      }
@@ -1172,7 +1511,7 @@ namespace leveldb {
 
         void HeapProfile() {
             char fname[100];
-            std::snprintf(fname, sizeof(fname), "%s/heap-%04d", FLAGS_db,
+            std::snprintf(fname, sizeof(fname), "%s/heap-%04d", FLAGS_db.c_str(),
                           ++heap_counter_);
             WritableFile* file;
             Status s = g_env->NewWritableFile(fname, {},&file);
@@ -1191,78 +1530,25 @@ namespace leveldb {
 
 }  // namespace leveldb
 
+
 int main(int argc, char** argv) {
+    gflags::ParseCommandLineFlags(&argc, &argv, true);
     FLAGS_write_buffer_size = leveldb::Options().write_buffer_size;
     FLAGS_max_file_size = leveldb::Options().max_file_size;
     FLAGS_block_size = leveldb::Options().block_size;
     FLAGS_open_files = leveldb::Options().max_open_files;
     std::string default_db_path;
 
-    for (int i = 1; i < argc; i++) {
-        double d;
-        int n;
-        char junk;
-        if (leveldb::Slice(argv[i]).starts_with("--benchmarks=")) {
-            FLAGS_benchmarks = argv[i] + strlen("--benchmarks=");
-        } else if (sscanf(argv[i], "--compression_ratio=%lf%c", &d, &junk) == 1) {
-            FLAGS_compression_ratio = d;
-        } else if (sscanf(argv[i], "--histogram=%d%c", &n, &junk) == 1 &&
-                   (n == 0 || n == 1)) {
-            FLAGS_histogram = n;
-        } else if (sscanf(argv[i], "--comparisons=%d%c", &n, &junk) == 1 &&
-                   (n == 0 || n == 1)) {
-            FLAGS_comparisons = n;
-        } else if (sscanf(argv[i], "--use_existing_db=%d%c", &n, &junk) == 1 &&
-                   (n == 0 || n == 1)) {
-            FLAGS_use_existing_db = n;
-        } else if (sscanf(argv[i], "--reuse_logs=%d%c", &n, &junk) == 1 &&
-                   (n == 0 || n == 1)) {
-            FLAGS_reuse_logs = n;
-        } else if (sscanf(argv[i], "--num=%d%c", &n, &junk) == 1) {
-            FLAGS_num = n;
-        } else if (sscanf(argv[i], "--reads=%d%c", &n, &junk) == 1) {
-            FLAGS_reads = n;
-        } else if (sscanf(argv[i], "--threads=%d%c", &n, &junk) == 1) {
-            FLAGS_threads = n;
-        } else if (sscanf(argv[i], "--mem_num=%d%c", &n, &junk) == 1) {
-            FLAGS_mem_num = n;
-        } else if (sscanf(argv[i], "--value_size=%d%c", &n, &junk) == 1) {
-            FLAGS_value_size = n;
-        } else if (sscanf(argv[i], "--key_size=%d%c", &n, &junk) == 1) {
-            FLAGS_key_size = n;
-        } else if (sscanf(argv[i], "--write_buffer_size=%d%c", &n, &junk) == 1) {
-            FLAGS_write_buffer_size = n;
-        } else if (sscanf(argv[i], "--max_file_size=%d%c", &n, &junk) == 1) {
-            FLAGS_max_file_size = n;
-        } else if (sscanf(argv[i], "--block_size=%d%c", &n, &junk) == 1) {
-            FLAGS_block_size = n;
-        } else if (sscanf(argv[i], "--key_prefix=%d%c", &n, &junk) == 1) {
-            FLAGS_key_prefix = n;
-        } else if (sscanf(argv[i], "--cache_size=%d%c", &n, &junk) == 1) {
-            FLAGS_cache_size = n;
-        } else if (sscanf(argv[i], "--bloom_bits=%d%c", &n, &junk) == 1) {
-            FLAGS_bloom_bits = n;
-        } else if (sscanf(argv[i], "--open_files=%d%c", &n, &junk) == 1) {
-            FLAGS_open_files = n;
-        } else if (sscanf(argv[i], "--numa_awared=%d%c", &n, &junk) == 1) {
-            FLAGS_enable_numa = n;
-        } else if (sscanf(argv[i], "--block_restart_interval=%d%c", &n, &junk) == 1) {
-            FLAGS_block_restart_interval = n;
-        } else if (strncmp(argv[i], "--db=", 5) == 0) {
-            FLAGS_db = argv[i] + 5;
-        } else {
-            std::fprintf(stderr, "Invalid flag '%s'\n", argv[i]);
-            std::exit(1);
-        }
-    }
+
+
 
     leveldb::g_env = leveldb::Env::Default();
 
     // Choose a location for the test database if none given with --db=<path>
-    if (FLAGS_db == nullptr) {
+    if (FLAGS_db.empty()) {
         leveldb::g_env->GetTestDirectory(&default_db_path);
         default_db_path += "/dbbench";
-        FLAGS_db = default_db_path.c_str();
+        FLAGS_db = default_db_path;
     }
 
     leveldb::Benchmark benchmark;
