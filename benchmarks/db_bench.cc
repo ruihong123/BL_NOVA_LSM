@@ -914,7 +914,7 @@ namespace leveldb {
             PrintHeader();
             Open();
 
-            const char* benchmarks = FLAGS_benchmarks;
+            const char* benchmarks = FLAGS_benchmarks.c_str();
 //    Validation_Write();
             while (benchmarks != nullptr) {
 
