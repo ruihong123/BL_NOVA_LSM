@@ -1048,6 +1048,7 @@ namespace leveldb {
                 }
                 break;
         }
+        NOVA_LOG(INFO) << "*** The received buffer[0] for stoc_client is "<< buf[0];
         return processed;
     }
 

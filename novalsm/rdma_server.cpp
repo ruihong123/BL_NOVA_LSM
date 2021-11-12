@@ -627,10 +627,12 @@ namespace nova {
                         task.replication_pairs.push_back(pair);
                     }
                     AddCompactionStorageTask(task);
+
                     processed = true;
                 }
                 break;
         }
+        NOVA_LOG(INFO) << "*** The received buffer[0] for rdma-server is "<< buf[0];
         return processed;
     }
 }
