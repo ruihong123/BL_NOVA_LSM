@@ -248,6 +248,7 @@ namespace nova {
                                   uint32_t imm_data,
                                   bool *) {
         bool processed = false;
+        NOVA_LOG(INFO) << "*** <Begin> The received buffer[0] for rdma-server is "<< buf[0];
         switch (type) {
             case IBV_WC_SEND:
                 break;
@@ -632,7 +633,7 @@ namespace nova {
                 }
                 break;
         }
-        NOVA_LOG(INFO) << "*** The received buffer[0] for rdma-server is "<< buf[0];
+        NOVA_LOG(INFO) << "*** <End> The received buffer[0] for rdma-server is "<< buf[0];
         return processed;
     }
 }
