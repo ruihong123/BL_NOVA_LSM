@@ -1553,6 +1553,6 @@ int main(int argc, char** argv) {
     }
 
     leveldb::Benchmark benchmark;
-//    benchmark.Run();
+    benchmark.Run();
     return 0;
 }
