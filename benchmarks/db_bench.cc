@@ -1017,10 +1017,10 @@ namespace leveldb {
                                      name.ToString().c_str());
                         method = nullptr;
                     } else {
-                        delete db_;
-                        db_ = nullptr;
-                        DestroyDB(FLAGS_db, Options());
-                        Open();
+//                        delete db_;
+//                        db_ = nullptr;
+//                        DestroyDB(FLAGS_db, Options());
+//                        Open();
 //                        DEBUG("The second open finished.\n");
                     }
                 }
