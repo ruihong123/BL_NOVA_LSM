@@ -168,8 +168,8 @@ void StartServer() {
     }
     mkdirs(NovaConfig::config->stoc_files_path.data());
     mkdirs(NovaConfig::config->db_path.data());
-//    auto *mem_server = new NICServer(rdma_ctrl, buf, port);
-    auto *mem_server = new LocalServer(rdma_ctrl, buf);
+    auto *mem_server = new NICServer(rdma_ctrl, buf, port);
+//    auto *mem_server = new LocalServer(rdma_ctrl, buf);
     mem_server->Start();
 }
 
