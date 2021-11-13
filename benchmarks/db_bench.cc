@@ -46,7 +46,23 @@
 using namespace std;
 using namespace rdmaio;
 using namespace nova;
+nova::NovaConfig *nova::NovaConfig::config = nullptr;
+std::atomic_int_fast32_t leveldb::EnvBGThread::bg_flush_memtable_thread_id_seq = 0;
+std::atomic_int_fast32_t leveldb::EnvBGThread::bg_compaction_thread_id_seq = 0;
+nova::NovaGlobalVariables nova::NovaGlobalVariables::global;
+std::atomic<nova::Servers *> leveldb::StorageSelector::available_stoc_servers;
+std::unordered_map<uint64_t, leveldb::FileMetaData *> leveldb::Version::last_fnfile;
+std::atomic_int_fast32_t leveldb::StorageSelector::stoc_for_compaction_seq_id;
 
+std::atomic_int_fast32_t nova::StorageWorker::storage_file_number_seq;
+// Sequence id to assign tasks to a thread in a round-robin manner.
+std::atomic_int_fast32_t nova::RDMAServerImpl::compaction_storage_worker_seq_id_;
+
+std::atomic_int_fast32_t nova::RDMAServerImpl::fg_storage_worker_seq_id_;
+std::atomic_int_fast32_t nova::RDMAServerImpl::bg_storage_worker_seq_id_;
+std::atomic_int_fast32_t leveldb::StoCBlockClient::rdma_worker_seq_id_;
+std::atomic_int_fast32_t nova::DBMigration::migration_seq_id_;
+namespace leveldb {
 DEFINE_string(db_path, "/tmp/db", "level db path");
 DEFINE_string(stoc_files_path, "/tmp/stoc", "StoC files path");
 
@@ -285,23 +301,8 @@ DEFINE_bool(enable_numa, false,
 DEFINE_string(db, "",
             "db name.");
 //static const char* FLAGS_db = nullptr;
-nova::NovaConfig *nova::NovaConfig::config = nullptr;
-std::atomic_int_fast32_t leveldb::EnvBGThread::bg_flush_memtable_thread_id_seq = 0;
-std::atomic_int_fast32_t leveldb::EnvBGThread::bg_compaction_thread_id_seq = 0;
-nova::NovaGlobalVariables nova::NovaGlobalVariables::global;
-std::atomic<nova::Servers *> leveldb::StorageSelector::available_stoc_servers;
-std::unordered_map<uint64_t, leveldb::FileMetaData *> leveldb::Version::last_fnfile;
-std::atomic_int_fast32_t leveldb::StorageSelector::stoc_for_compaction_seq_id;
 
-std::atomic_int_fast32_t nova::StorageWorker::storage_file_number_seq;
-// Sequence id to assign tasks to a thread in a round-robin manner.
-std::atomic_int_fast32_t nova::RDMAServerImpl::compaction_storage_worker_seq_id_;
 
-std::atomic_int_fast32_t nova::RDMAServerImpl::fg_storage_worker_seq_id_;
-std::atomic_int_fast32_t nova::RDMAServerImpl::bg_storage_worker_seq_id_;
-std::atomic_int_fast32_t leveldb::StoCBlockClient::rdma_worker_seq_id_;
-std::atomic_int_fast32_t nova::DBMigration::migration_seq_id_;
-namespace leveldb {
 
     namespace {
         leveldb::Env* g_env = nullptr;
@@ -1529,15 +1530,18 @@ namespace leveldb {
         }
     };
 
-}  // namespace leveldb
 
+
+
+
+}  // namespace leveldb
 
 int main(int argc, char** argv) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
-    FLAGS_write_buffer_size = leveldb::Options().write_buffer_size;
-    FLAGS_max_file_size = leveldb::Options().max_file_size;
-    FLAGS_block_size = leveldb::Options().block_size;
-    FLAGS_open_files = leveldb::Options().max_open_files;
+    leveldb::FLAGS_write_buffer_size = leveldb::Options().write_buffer_size;
+    leveldb::FLAGS_max_file_size = leveldb::Options().max_file_size;
+    leveldb::FLAGS_block_size = leveldb::Options().block_size;
+    leveldb::FLAGS_open_files = leveldb::Options().max_open_files;
     std::string default_db_path;
 
 
@@ -1546,10 +1550,10 @@ int main(int argc, char** argv) {
     leveldb::g_env = leveldb::Env::Default();
 
     // Choose a location for the test database if none given with --db=<path>
-    if (FLAGS_db.empty()) {
+    if (leveldb::FLAGS_db.empty()) {
         leveldb::g_env->GetTestDirectory(&default_db_path);
         default_db_path += "/dbbench";
-        FLAGS_db = default_db_path;
+        string &FLAGS_db = default_db_path;
     }
 
     leveldb::Benchmark benchmark;

@@ -907,7 +907,8 @@ namespace leveldb {
                                     stoc_file_offset,
                                     req_id);
                         processed = true;
-                    } else if (context.req_type == StoCRequestType::STOC_READ_BLOCKS) {
+                    }
+                    else if (context.req_type == StoCRequestType::STOC_READ_BLOCKS) {
 //                        if (context.log_file_name.empty()) {
 //                            NOVA_ASSERT(
 //                                    context.backing_mem[context.size - 1] != 0)
@@ -925,7 +926,8 @@ namespace leveldb {
                         } else {
                             context.done = false;
                         }
-                    } else if (buf[0] ==
+                    }
+                    else if (buf[0] ==
                                StoCRequestType::STOC_PERSIST_RESPONSE) {
                         NOVA_ASSERT(context.req_type ==
                                     StoCRequestType::STOC_WRITE_SSTABLE);
@@ -948,7 +950,8 @@ namespace leveldb {
                                     stoc_client_id_, stoc_block_handles, rids,
                                     req_id);
                         processed = true;
-                    } else if (buf[0] ==
+                    }
+                    else if (buf[0] ==
                                StoCRequestType::STOC_READ_STATS_RESPONSE) {
                         context.stoc_queue_depth = leveldb::DecodeFixed64(
                                 buf + 1);
@@ -958,7 +961,8 @@ namespace leveldb {
                                 buf + 17);
                         context.done = true;
                         processed = true;
-                    } else if (buf[0] ==
+                    }
+                    else if (buf[0] ==
                                StoCRequestType::STOC_ALLOCATE_LOG_BUFFER_SUCC) {
                         uint64_t base = leveldb::DecodeFixed64(buf + 1);
                         uint64_t size = leveldb::DecodeFixed64(buf + 9);
@@ -978,7 +982,8 @@ namespace leveldb {
                                     "stocclient[{}]: Allocate log buffer success req:{}",
                                     stoc_client_id_, req_id);
                         processed = true;
-                    } else if (buf[0] ==
+                    }
+                    else if (buf[0] ==
                                StoCRequestType::RDMA_WRITE_REMOTE_BUF_ALLOCATED) {
                         uint64_t remote_buf = leveldb::DecodeFixed64(buf + 1);
                         uint64_t size = leveldb::DecodeFixed64(buf + 9);
@@ -997,7 +1002,8 @@ namespace leveldb {
                                     "stocclient[{}]: Allocate log buffer success req:{}",
                                     stoc_client_id_, req_id);
                         processed = true;
-                    } else if (buf[0] ==
+                    }
+                    else if (buf[0] ==
                                StoCRequestType::STOC_QUERY_LOG_FILES_RESPONSE) {
                         uint32_t read_size = 1;
                         uint32_t size = leveldb::DecodeFixed32(buf + read_size);
@@ -1013,11 +1019,13 @@ namespace leveldb {
                         }
                         context.done = true;
                         processed = true;
-                    } else if (buf[0] ==
+                    }
+                    else if (buf[0] ==
                                StoCRequestType::STOC_FILENAME_STOCFILEID_RESPONSE) {
                         context.done = true;
                         processed = true;
-                    } else if (buf[0] ==
+                    }
+                    else if (buf[0] ==
                                StoCRequestType::STOC_COMPACTION_RESPONSE) {
                         uint32_t num_outputs = leveldb::DecodeFixed32(buf + 1);
                         Slice outputs(buf + 5,
@@ -1029,7 +1037,8 @@ namespace leveldb {
                         }
                         context.done = true;
                         processed = true;
-                    } else if (buf[0] ==
+                    }
+                    else if (buf[0] ==
                                StoCRequestType::STOC_IS_READY_FOR_REQUESTS_RESPONSE) {
                         bool is_ready = leveldb::DecodeBool(buf + 1);
                         context.is_ready_for_requests = is_ready;
