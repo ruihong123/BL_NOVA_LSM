@@ -269,7 +269,7 @@ namespace nova {
                     thread_id.resize(kMaxThreadIdSize);
                 }
 
-                NOVA_LOG(INFO) << fmt::format("{}:{}", thread_id, tid.second);
+//                NOVA_LOG(INFO) << fmt::format("{}:{}", thread_id, tid.second);
             }
         }
 
