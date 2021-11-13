@@ -62,7 +62,7 @@ std::atomic_int_fast32_t nova::RDMAServerImpl::fg_storage_worker_seq_id_;
 std::atomic_int_fast32_t nova::RDMAServerImpl::bg_storage_worker_seq_id_;
 std::atomic_int_fast32_t leveldb::StoCBlockClient::rdma_worker_seq_id_;
 std::atomic_int_fast32_t nova::DBMigration::migration_seq_id_;
-namespace leveldb {
+
 DEFINE_string(db_path, "/tmp/db", "level db path");
 DEFINE_string(stoc_files_path, "/tmp/stoc", "StoC files path");
 
@@ -302,7 +302,7 @@ DEFINE_string(db, "",
             "db name.");
 //static const char* FLAGS_db = nullptr;
 
-
+namespace leveldb {
 
     namespace {
         leveldb::Env* g_env = nullptr;
@@ -1538,10 +1538,10 @@ DEFINE_string(db, "",
 
 int main(int argc, char** argv) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
-    leveldb::FLAGS_write_buffer_size = leveldb::Options().write_buffer_size;
-    leveldb::FLAGS_max_file_size = leveldb::Options().max_file_size;
-    leveldb::FLAGS_block_size = leveldb::Options().block_size;
-    leveldb::FLAGS_open_files = leveldb::Options().max_open_files;
+    FLAGS_write_buffer_size = leveldb::Options().write_buffer_size;
+    FLAGS_max_file_size = leveldb::Options().max_file_size;
+    FLAGS_block_size = leveldb::Options().block_size;
+    FLAGS_open_files = leveldb::Options().max_open_files;
     std::string default_db_path;
 
 
@@ -1550,7 +1550,7 @@ int main(int argc, char** argv) {
     leveldb::g_env = leveldb::Env::Default();
 
     // Choose a location for the test database if none given with --db=<path>
-    if (leveldb::FLAGS_db.empty()) {
+    if (FLAGS_db.empty()) {
         leveldb::g_env->GetTestDirectory(&default_db_path);
         default_db_path += "/dbbench";
         string &FLAGS_db = default_db_path;
