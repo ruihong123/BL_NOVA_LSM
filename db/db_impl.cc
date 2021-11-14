@@ -2070,9 +2070,10 @@ namespace leveldb {
                        std::string *value) {
         number_of_gets_ += 1;
         if (lookup_index_) {
-            if (GetWithLookupIndex(options, key, value).ok()) {
-                return Status::OK();
-            }
+//            if (GetWithLookupIndex(options, key, value).ok()) {
+//                return Status::OK();
+//            }
+            return GetWithLookupIndex(options, key, value);
         }
         return GetWithRangeIndex(options, key, value);
     }
