@@ -141,6 +141,7 @@ namespace leveldb {
         terminate_coordinated_compaction_ = false;
         start_compaction_ = true;
         if (options_.enable_lookup_index) {
+            //So big!
             lookup_index_ = new LookupIndex(
                     options_.upper_key - options_.lower_key);
             for (int i = 0; i < options_.upper_key - options_.lower_key; i++) {
