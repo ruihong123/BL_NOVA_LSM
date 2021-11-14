@@ -816,7 +816,7 @@ namespace leveldb {
                            char *buf,
                            uint32_t imm_data, bool *) {
         bool processed = false;
-        NOVA_LOG(INFO) << "*** <Begin> The received buffer[0] for stoc-client is "<< buf[0];
+//        NOVA_LOG(INFO) << "*** <Begin> The received buffer[0] for stoc-client is "<< buf[0];
 
         uint32_t req_id = imm_data;
         switch (type) {
@@ -1059,8 +1059,8 @@ namespace leveldb {
                 }
                 break;
         }
-        NOVA_LOG(INFO) << "*** <End> The received buffer[0] for stoc_client is "<< buf[0];
-        NOVA_LOG(INFO) << "*** <End> type is "<< type;
+//        NOVA_LOG(INFO) << "*** <End> The received buffer[0] for stoc_client is "<< buf[0];
+//        NOVA_LOG(INFO) << "*** <End> type is "<< type;
 
         return processed;
     }
