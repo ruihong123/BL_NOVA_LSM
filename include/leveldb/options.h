@@ -129,7 +129,7 @@ namespace leveldb {
         std::vector<EnvBGThread *> bg_flush_memtable_threads = {};
         EnvBGThread *reorg_thread = nullptr;
         EnvBGThread *compaction_coordinator_thread = nullptr;
-
+        //total number of memtables
         uint32_t num_memtables = 2;
 
         MemTableType memtable_type = MemTableType::kStaticPartition;
