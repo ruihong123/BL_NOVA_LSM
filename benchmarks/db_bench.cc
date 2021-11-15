@@ -1035,6 +1035,32 @@ namespace leveldb {
 //                    DEBUG("The benchmark start.\n");
                     RunBenchmark(num_threads, name, method);
 //                    DEBUG("Benchmark finished\n");
+                    if (method == &Benchmark::WriteRandom){
+                        // Wait until there are no SSTables at L0.
+                        while (NovaConfig::config->major_compaction_type != "no") {
+                            uint32_t l0tables = 0;
+                            uint32_t nmemtables = 0;
+                            bool needs_compaction = false;
+                            {
+                                leveldb::DBStats stats;
+                                stats.sstable_size_dist = new uint32_t[20];
+                                db_->QueryDBStats(&stats);
+                                if (!needs_compaction) {
+                                    needs_compaction = stats.needs_compaction;
+                                }
+                                l0tables += stats.num_l0_sstables;
+                                nmemtables += db_->FlushMemTables(true);
+                                delete stats.sstable_size_dist;
+                            }
+                            NOVA_LOG(rdmaio::INFO) << fmt::format(
+                                        "Waiting for {} L0 tables and {} memtables to go to L1 Needs compaction:{}",
+                                        l0tables, nmemtables, needs_compaction);
+                            if (l0tables == 0 && nmemtables == 0) {
+                                break;
+                            }
+                            sleep(1);
+                        }
+                    }
 //
                 }
             }
