@@ -285,7 +285,7 @@ namespace nova {
 
 //            NOVA_LOG(INFO) << "*** <End> processed_by_server is "<< processed_by_server;
 
-            NOVA_ASSERT(false)
+//            NOVA_ASSERT(false)
 //                << fmt::format("Processed by both client and server");
         }
     }
