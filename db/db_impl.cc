@@ -2512,6 +2512,8 @@ namespace leveldb {
                 imm.partition_id = partition_id;
                 imm.next_imm_slot = slot_immid.first;
                 imms.push_back(imm);
+                NOVA_LOG(rdmaio::INFO) << fmt::format(
+                            "There is still immutable in memory. THe problem is about the flush scheduling");
             }
             partition->mutex.Unlock();
         }
