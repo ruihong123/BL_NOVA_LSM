@@ -1064,6 +1064,7 @@ namespace leveldb {
             Iterator *iter = imm->NewIterator(TraceType::IMMUTABLE_MEMTABLE, AccessCaller::kCompaction);
             nova::NovaGlobalVariables::global.generated_memtable_sizes += imm->ApproximateMemoryUsage();
             s = BuildTable(dbname_, env_, options_, table_cache_, iter, &meta, bg_thread, prune_memtable);
+            NOVA_LOG(nova::INFO) << fmt::format("Flush a memtable, number is {}, size is {}",meta.number ,meta.file_size);
             NOVA_ASSERT(s.ok()) << s.ToString();
             delete iter;
             // Note that if file_size is zero, the file has been deleted and
@@ -1275,10 +1276,10 @@ namespace leveldb {
                              meta.largest,
                              meta.block_replica_handles, meta.parity_block_handle);
             }
-            NOVA_LOG(rdmaio::DEBUG)
+            NOVA_LOG(rdmaio::INFO)
                 << fmt::format(
-                        "db[{}]: !!!!!!!!!!!!!!!!!!!!!!!!!!!! Flush memtable-{}",
-                        dbid_, imm->memtableid());
+                        "db[{}]: !!!!!!!!!!!!!!!!!!!!!!!!!!!! Flush memtable-{}, size is {}",
+                        dbid_, imm->memtableid(), meta.file_size);
         }
 
         versions_->AppendChangesToManifest(&edit, manifest_file_,
@@ -1389,7 +1390,7 @@ namespace leveldb {
                                                                                 std::memory_order_seq_cst)) {
             return;
         }
-        NOVA_LOG(rdmaio::DEBUG)
+        NOVA_LOG(rdmaio::INFO)
             << fmt::format("flush memtable-{} {} {} {}", memtable_id, partition_id, imm_slot,
                            merge_memtables_without_flushing);
         NOVA_ASSERT(imm) << fmt::format("flush memtable-{} {} {} {}", imm->memtableid(), partition_id, imm_slot,
@@ -1445,6 +1446,7 @@ namespace leveldb {
                                                               &closed_memtable_log_files);
         }
         if (!memtable_tasks.empty()) {
+
             CompactMemTableStaticPartition(bg_thread, memtable_tasks, &edit, options_.enable_flush_multiple_memtables);
             // Include the latest version.
             versions_->AppendChangesToManifest(&edit, manifest_file_, options_.manifest_stoc_ids);
