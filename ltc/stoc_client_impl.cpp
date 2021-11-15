@@ -1061,7 +1061,7 @@ namespace leveldb {
         }
 //        NOVA_LOG(INFO) << "*** <End> The received buffer[0] for stoc_client is "<< buf[0];
 //        NOVA_LOG(INFO) << "*** <End> type is "<< type;
-//        NOVA_LOG(INFO) << "*** <End> processed is "<< processed;
+        NOVA_LOG(INFO) << "*** <End> processed is "<< processed;
         return processed;
     }
 
