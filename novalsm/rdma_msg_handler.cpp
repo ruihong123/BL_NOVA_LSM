@@ -289,5 +289,6 @@ namespace nova {
             NOVA_ASSERT(false)
                 << fmt::format("Processed by both client and server");
         }
+        return true;
     }
 }
