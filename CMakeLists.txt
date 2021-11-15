@@ -89,7 +89,9 @@ endif (BUILD_SHARED_LIBS)
 include(GNUInstallDirs)
 #add_library(nova_config common/nova_config.h
 #        common/nova_config.cc common/nova_common.h common/nova_common.cpp)
-
+#add_library(msg_lowO novalsm/rdma_msg_handler.cpp
+#        novalsm/rdma_msg_handler.h)
+#target_compile_options(msg_lowO PRIVATE -O0)
 add_library(leveldb "" )
 target_sources(leveldb
         PRIVATE
@@ -287,7 +289,8 @@ target_sources(leveldb
         common/nova_common.h
         common/nova_config.h
         )
-
+#target_link_libraries(leveldb msg_lowO)
+#target_compile_options(leveldb PRIVATE -O3)
 if (WIN32)
     target_sources(leveldb
             PRIVATE
