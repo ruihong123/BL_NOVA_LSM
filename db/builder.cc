@@ -121,7 +121,7 @@ namespace leveldb {
                     builder->Add(key, iter->value());
                 }
             }
-            NOVA_LOG(rdmaio::DEBUG)
+            NOVA_LOG(rdmaio::INFO)
                 << fmt::format(
                         "!!!!!!!!!!!!!!!!!!!!! CompactMemTable tid:{} alloc_size:{} nentries:{} nblocks:{}",
                         bg_thread->thread_id(), options.max_stoc_file_size,
