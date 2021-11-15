@@ -1368,8 +1368,8 @@ namespace leveldb {
 //        found++;
 //      }
                 if (db_->Get(options, key, &value).ok()) {
-                    NOVA_ASSERT(value.size() == 412)
-                        << fmt::format("value size is not correct %d", value.size());
+                    NOVA_ASSERT(value.size() == 416)
+                        << fmt::format("value size is not correct {}", value.size());
                     found++;
                 }
                 thread->stats.FinishedSingleOp();
