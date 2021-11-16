@@ -115,6 +115,10 @@ namespace leveldb {
                     Slice ukey = ExtractUserKey(key);
                     if (!user_key.empty() && user_comp->Compare(ukey, user_key) == 0) {
                         insert = false;
+                        uint64_t ai = 0;
+                        nova::str_to_int(ukey.data(), &ai, ukey.size());
+                        uint64_t bi = 0;
+                        nova::str_to_int(user_key.data(), &bi, user_key.size());
                         dropped_num++;
                     }
                     user_key = ukey;
