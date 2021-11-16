@@ -2197,10 +2197,10 @@ namespace leveldb {
 //            }
         }
 //        NOVA_ASSERT(s.ok())
-            << fmt::format("key:{} val:{} seq:{} status:{} version:{}",
-                           key.ToString(), value->size(), latest_seq,
-                           s.ToString(),
-                           current->DebugString());
+//            << fmt::format("key:{} val:{} seq:{} status:{} version:{}",
+//                           key.ToString(), value->size(), latest_seq,
+//                           s.ToString(),
+//                           current->DebugString());
         versions_->versions_[vid]->Unref(dbname_);
         return s;
     }
