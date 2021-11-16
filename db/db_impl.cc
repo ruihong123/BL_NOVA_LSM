@@ -2518,8 +2518,14 @@ namespace leveldb {
             partition->mutex.Unlock();
         }
         for (auto &imm : imms) {
+            NOVA_LOG(rdmaio::INFO) << fmt::format("minor compaction scheduled");
             ScheduleFlushMemTableTask(imm.thread_id, imm.memtable_id, imm.table, imm.partition_id, imm.next_imm_slot, &rand_seed_,
                                       false);
+        }
+        if (imms.size()==0 && number_of_immutable_memtables_ > 0){
+            NOVA_LOG(rdmaio::INFO) << fmt::format(
+                "number_of_immutable_memtables_ says there is still memtable, but we did not get anty from the manager");
+
         }
         return number_of_immutable_memtables_;
     }
