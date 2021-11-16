@@ -2196,7 +2196,7 @@ namespace leveldb {
 //                value->assign(l1val);
 //            }
         }
-        NOVA_ASSERT(s.ok())
+//        NOVA_ASSERT(s.ok())
             << fmt::format("key:{} val:{} seq:{} status:{} version:{}",
                            key.ToString(), value->size(), latest_seq,
                            s.ToString(),
