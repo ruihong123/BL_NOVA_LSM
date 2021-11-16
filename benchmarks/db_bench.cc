@@ -548,7 +548,7 @@ namespace leveldb {
         };
 
     }  // namespace
-    DB* StartServer() {
+    void *StartServer(DB **db, LocalServer **local_server) {
         RdmaCtrl *rdma_ctrl = new RdmaCtrl(NovaConfig::config->my_server_id,
                                            NovaConfig::config->rdma_port);
 //    if (NovaConfig::config->my_server_id < FLAGS_number_of_ltcs) {
@@ -575,10 +575,10 @@ namespace leveldb {
         mkdirs(NovaConfig::config->stoc_files_path.data());
         mkdirs(NovaConfig::config->db_path.data());
 //    auto *mem_server = new NICServer(rdma_ctrl, buf, port);
-        auto *mem_server = new LocalServer(rdma_ctrl, buf);
-        return mem_server->Start();
+        *local_server = new LocalServer(rdma_ctrl, buf);
+        *db =  (*local_server)->Start();
     }
-    DB* nova_config_process_code(){
+    void *nova_config_process_code(DB **db, LocalServer **local_server) {
 
         int i;
 //    const char **methods = event_get_supported_methods();
@@ -737,13 +737,14 @@ namespace leveldb {
                         "Not enough stoc to replicate sstables. Replication factor: {} Num StoCs: {}",
                         FLAGS_num_sstable_replicas, cfg->stoc_servers.size());
         }
-        return StartServer();
+        StartServer(db, local_server);
     }
     class Benchmark {
     private:
         Cache* cache_;
         const FilterPolicy* filter_policy_;
         DB* db_;
+        LocalServer* local_s;
         int num_;
         int value_size_;
         int entries_per_batch_;
@@ -1244,8 +1245,7 @@ namespace leveldb {
 
         void Open() {
             assert(db_ == nullptr);
-            db_ = nova_config_process_code();
-
+            nova_config_process_code(&db_, &local_s);
 //            Status s = DB::Open(options, FLAGS_db, &db_);
 //            if (!s.ok()) {
 //                std::fprintf(stderr, "open error: %s\n", s.ToString().c_str());
@@ -1377,6 +1377,15 @@ namespace leveldb {
 
         void ReadRandom(ThreadState* thread) {
             ReadOptions options;
+//            leveldb::ReadOptions read_options;
+//            options.hash = int_key;
+//            options.stoc_client = worker->stoc_client_;
+            uint32_t scid = local_s->mem_manager->slabclassid(0, MAX_BLOCK_SIZE);
+            options.mem_manager = local_s->mem_manager;
+//            options.thread_id = worker->thread_id_;
+            options.rdma_backing_mem = local_s->mem_manager->ItemAlloc(0, scid);
+            options.rdma_backing_mem_size = MAX_BLOCK_SIZE;
+            options.cfg_id = NovaConfig::config->current_cfg_id;
             //TODO(ruihong): specify the cache option.
             std::string value;
             int found = 0;
@@ -1390,6 +1399,7 @@ namespace leveldb {
 //            key.Set(k);
 //                GenerateKeyFromInt(k, FLAGS_num, &key);
                 memcpy((void *) key.data(), (void*)(&k), sizeof(int));
+                options.hash = k;
 //      if (db_->Get(options, key.slice(), &value).ok()) {
 //        found++;
 //      }
