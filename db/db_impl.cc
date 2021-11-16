@@ -2555,9 +2555,7 @@ namespace leveldb {
             imm_slot = -1;
             if (table) {
                 auto atomic_mem = versions_->mid_table_mapping_[table->memtableid()];
-                if (atomic_mem->memtable_size_ <= options_.write_buffer_size) {
-                    break;
-                }
+
                 bool wait_for_l0 = false;
                 while (options_.l0bytes_stop_writes_trigger > 0) {
                     // Get the current version.
@@ -2582,7 +2580,9 @@ namespace leveldb {
                     versions_->versions_[current->version_id_]->Unref(dbname_);
                     break;
                 }
-
+                if (atomic_mem->memtable_size_ <= options_.write_buffer_size) {
+                    break;
+                }
                 if (wait_for_l0) {
                     // Check if the table is still valid.
                     continue;
