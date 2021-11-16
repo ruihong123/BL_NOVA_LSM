@@ -317,22 +317,22 @@ namespace nova {
             rdma_server->rdma_write_handler_ = write_handler;
         }
 
-//        for (int i = 0; i < NovaConfig::config->num_conn_workers; i++) {
-//            conn_workers.push_back(new NICClientReqWorker(i));
-//            conn_workers[i]->mem_manager_ = mem_manager;
-//
-//            uint32_t scid = mem_manager->slabclassid(0, MAX_BLOCK_SIZE);
-//            conn_workers[i]->rdma_backing_mem = mem_manager->ItemAlloc(0, scid);
-//            conn_workers[i]->rdma_backing_mem_size = MAX_BLOCK_SIZE;
-//            memset(conn_workers[i]->rdma_backing_mem, 0, MAX_BLOCK_SIZE);
-//
-//            conn_workers[i]->stoc_client_ = new leveldb::StoCBlockClient(i, stoc_file_manager);
-//            conn_workers[i]->stoc_client_->rdma_msg_handlers_ = fg_rdma_msg_handlers;
-//            conn_workers[i]->rdma_threads = rdma_threads;
-//            conn_workers[i]->ctrl_ = rdma_ctrl;
-//            conn_workers[i]->stoc_file_manager_ = stoc_file_manager;
-//            conn_workers[i]->db_migration_threads_ = db_migration_threads;
-//        }
+        for (int i = 0; i < NovaConfig::config->num_conn_workers; i++) {
+            conn_workers.push_back(new NICClientReqWorker(i));
+            conn_workers[i]->mem_manager_ = mem_manager;
+
+            uint32_t scid = mem_manager->slabclassid(0, MAX_BLOCK_SIZE);
+            conn_workers[i]->rdma_backing_mem = mem_manager->ItemAlloc(0, scid);
+            conn_workers[i]->rdma_backing_mem_size = MAX_BLOCK_SIZE;
+            memset(conn_workers[i]->rdma_backing_mem, 0, MAX_BLOCK_SIZE);
+
+            conn_workers[i]->stoc_client_ = new leveldb::StoCBlockClient(i, stoc_file_manager);
+            conn_workers[i]->stoc_client_->rdma_msg_handlers_ = fg_rdma_msg_handlers;
+            conn_workers[i]->rdma_threads = rdma_threads;
+            conn_workers[i]->ctrl_ = rdma_ctrl;
+            conn_workers[i]->stoc_file_manager_ = stoc_file_manager;
+            conn_workers[i]->db_migration_threads_ = db_migration_threads;
+        }
 
         for (int i = 0; i < NovaConfig::config->num_compaction_workers; i++) {
             auto bg = static_cast<leveldb::LTCCompactionThread *>(bg_flush_memtable_threads[i]);
