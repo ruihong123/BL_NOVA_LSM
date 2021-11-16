@@ -865,7 +865,8 @@ namespace leveldb {
             delete filter_policy_;
         }
         Slice AllocateKey(std::unique_ptr<const char[]>* key_guard) {
-            char* data = new char[sizeof(int)];
+            // Hardcoded as 10 bytes.
+            char* data = new char[10];
             const char* const_data = data;
             key_guard->reset(const_data);
             return Slice(key_guard->get(), sizeof(int));
@@ -1331,18 +1332,20 @@ namespace leveldb {
             Status s;
             int64_t bytes = 0;
 //    KeyBuffer key;
-            std::unique_ptr<const char[]> key_guard;
-            Slice key = AllocateKey(&key_guard);
+//            std::unique_ptr<const char[]> key_guard;
+//            Slice key = AllocateKey(&key_guard);
+            char* key_b = new char[10];
             for (int i = 0; i < num_; i += entries_per_batch_) {
                 batch.Clear();
                 for (int j = 0; j < entries_per_batch_; j++) {
                     //The key range should be adjustable.
 //        const int k = seq ? i + j : thread->rand.Uniform(FLAGS_num*FLAGS_threads);
-                    const int k = seq ? i + j : thread->rand.Next()%(FLAGS_num*FLAGS_threads);
-
+                    const uint64_t k = seq ? i + j : thread->rand.Next()%(FLAGS_num*FLAGS_threads);
+                    size_t len = nova::int_to_str(key_b, k);
+                    Slice key =  Slice(key_b, len);
 //        key.Set(k);
 //                    GenerateKeyFromInt(k, FLAGS_num, &key);
-                    memcpy((void *) key.data(), (void*)(&k), sizeof(int));
+//                    memcpy((void *) key.data(), (void*)(&k), sizeof(int));
 //                    std::cout<< key.ToString() <<std::endl;
                     write_options_.hash = k;
 //        batch.Put(key.slice(), gen.Generate(value_size_));
