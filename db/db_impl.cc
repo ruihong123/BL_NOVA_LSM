@@ -1390,7 +1390,7 @@ namespace leveldb {
                                                                                 std::memory_order_seq_cst)) {
             return;
         }
-        NOVA_LOG(rdmaio::INFO)
+        NOVA_LOG(rdmaio::DEBUG)
             << fmt::format("flush memtable-{} {} {} {}", memtable_id, partition_id, imm_slot,
                            merge_memtables_without_flushing);
         NOVA_ASSERT(imm) << fmt::format("flush memtable-{} {} {} {}", imm->memtableid(), partition_id, imm_slot,
@@ -2518,7 +2518,7 @@ namespace leveldb {
             partition->mutex.Unlock();
         }
         for (auto &imm : imms) {
-            NOVA_LOG(rdmaio::INFO) << fmt::format("minor compaction scheduled");
+//            NOVA_LOG(rdmaio::INFO) << fmt::format("minor compaction scheduled");
             ScheduleFlushMemTableTask(imm.thread_id, imm.memtable_id, imm.table, imm.partition_id, imm.next_imm_slot, &rand_seed_,
                                       false);
         }
