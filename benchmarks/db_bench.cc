@@ -1315,7 +1315,17 @@ namespace leveldb {
                 std::snprintf(msg, sizeof(msg), "(%d ops)", num_);
                 thread->stats.AddMessage(msg);
             }
+            auto worker = local_s->conn_workers[thread->tid];
+            write_options_.stoc_client = worker->stoc_client_;
+            write_options_.local_write = false;
+            write_options_.thread_id = worker->thread_id_;
+            write_options_.rand_seed = &worker->rand_seed;
 
+//            write_options_.total_writes = total_writes.fetch_add(1, std::memory_order_relaxed) + 1;
+            write_options_.replicate_log_record_states = worker->replicate_log_record_states;
+            write_options_.rdma_backing_mem = worker->rdma_backing_mem;
+            write_options_.rdma_backing_mem_size = worker->rdma_backing_mem_size;
+            write_options_.is_loading_db = false;
             RandomGenerator gen;
             WriteBatch batch;
             Status s;
@@ -1333,6 +1343,7 @@ namespace leveldb {
 //        key.Set(k);
 //                    GenerateKeyFromInt(k, FLAGS_num, &key);
                     memcpy((void *) key.data(), (void*)(&k), sizeof(int));
+                    write_options_.hash = k;
 //        batch.Put(key.slice(), gen.Generate(value_size_));
                     db_->Put(write_options_, key, gen.Generate(value_size_));
 
@@ -1380,12 +1391,13 @@ namespace leveldb {
 //            leveldb::ReadOptions read_options;
 //            options.hash = int_key;
             // tid is the thread number start from 0
-            options.stoc_client = local_s->conn_workers[thread->tid]->stoc_client_;
-            uint32_t scid = local_s->mem_manager->slabclassid(0, MAX_BLOCK_SIZE);
-            options.mem_manager = local_s->mem_manager;
+            auto worker = local_s->conn_workers[thread->tid];
+            options.stoc_client = worker->stoc_client_;
+//            uint32_t scid = local_s->mem_manager->slabclassid(0, MAX_BLOCK_SIZE);
+            options.mem_manager = worker->mem_manager_;
 //            options.thread_id = worker->thread_id_;
-            options.rdma_backing_mem = local_s->mem_manager->ItemAlloc(0, scid);
-            options.rdma_backing_mem_size = MAX_BLOCK_SIZE;
+            options.rdma_backing_mem = worker->rdma_backing_mem;
+            options.rdma_backing_mem_size = worker->rdma_backing_mem_size;
             options.cfg_id = NovaConfig::config->current_cfg_id;
             //TODO(ruihong): specify the cache option.
             std::string value;
