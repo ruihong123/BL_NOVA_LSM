@@ -1055,6 +1055,8 @@ namespace leveldb {
                                                 bool prune_memtable) {
         for (auto &task : tasks) {
             MemTable *imm = reinterpret_cast<MemTable *>(task.memtable);
+            NOVA_LOG(nova::INFO) << fmt::format("memtable size is {}",
+                                                imm->);
             NOVA_ASSERT(imm);
             FileMetaData &meta = imm->meta();
             meta.number = versions_->NewFileNumber();
@@ -1064,7 +1066,8 @@ namespace leveldb {
             Iterator *iter = imm->NewIterator(TraceType::IMMUTABLE_MEMTABLE, AccessCaller::kCompaction);
             nova::NovaGlobalVariables::global.generated_memtable_sizes += imm->ApproximateMemoryUsage();
             s = BuildTable(dbname_, env_, options_, table_cache_, iter, &meta, bg_thread, prune_memtable);
-            NOVA_LOG(nova::INFO) << fmt::format("Flush a memtable, number is {}, size is {}, smallest key is {}, largest key is {}",meta.number ,meta.file_size, meta.smallest.Encode().ToString(), meta.largest.Encode().ToString());
+            NOVA_LOG(nova::INFO) << fmt::format("Flush a memtable, number is {}, size is {}, smallest key is {}, largest key is {}",
+                                                meta.number ,meta.file_size, meta.smallest.Encode().ToString(), meta.largest.Encode().ToString());
             NOVA_ASSERT(s.ok()) << s.ToString();
             delete iter;
             // Note that if file_size is zero, the file has been deleted and
