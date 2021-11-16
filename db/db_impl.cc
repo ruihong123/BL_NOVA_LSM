@@ -1055,8 +1055,8 @@ namespace leveldb {
                                                 bool prune_memtable) {
         for (auto &task : tasks) {
             MemTable *imm = reinterpret_cast<MemTable *>(task.memtable);
-            NOVA_LOG(nova::INFO) << fmt::format("memtable size is {}",
-                                                imm->);
+//            NOVA_LOG(nova::INFO) << fmt::format("memtable size is {}",
+//                                                imm->);
             NOVA_ASSERT(imm);
             FileMetaData &meta = imm->meta();
             meta.number = versions_->NewFileNumber();
