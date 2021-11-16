@@ -105,6 +105,7 @@ namespace leveldb {
 
             Slice user_key;
             bool insert = true;
+            int total_kv_num = 0;
             meta->smallest.DecodeFrom(iter->key());
             for (; iter->Valid(); iter->Next()) {
                 insert = true;
@@ -120,13 +121,14 @@ namespace leveldb {
                     meta->largest.DecodeFrom(key);
                     builder->Add(key, iter->value());
                 }
+                total_kv_num++;
             }
             NOVA_LOG(rdmaio::INFO)
                 << fmt::format(
-                        "!!!!!!!!!!!!!!!!!!!!! CompactMemTable tid:{} alloc_size:{} nentries:{} nblocks:{}",
+                        "!!!!!!!!!!!!!!!!!!!!! CompactMemTable tid:{} alloc_size:{} nentries:{} nblocks:{}, total_kv_num:{}",
                         bg_thread->thread_id(), options.max_stoc_file_size,
                         builder->NumEntries(),
-                        builder->NumDataBlocks());
+                        builder->NumDataBlocks(), total_kv_num);
 
             // Finish and check for builder errors
             s = builder->Finish();

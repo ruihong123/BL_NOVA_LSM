@@ -1343,7 +1343,7 @@ namespace leveldb {
 //        key.Set(k);
 //                    GenerateKeyFromInt(k, FLAGS_num, &key);
                     memcpy((void *) key.data(), (void*)(&k), sizeof(int));
-                    std::cout<< key.ToString() <<std::endl;
+//                    std::cout<< key.ToString() <<std::endl;
                     write_options_.hash = k;
 //        batch.Put(key.slice(), gen.Generate(value_size_));
                     db_->Put(write_options_, key, gen.Generate(value_size_));
