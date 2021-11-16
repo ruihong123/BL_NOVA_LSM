@@ -1379,7 +1379,8 @@ namespace leveldb {
             ReadOptions options;
 //            leveldb::ReadOptions read_options;
 //            options.hash = int_key;
-//            options.stoc_client = worker->stoc_client_;
+            // tid is the thread number start from 0
+            options.stoc_client = local_s->conn_workers[thread->tid]->stoc_client_;
             uint32_t scid = local_s->mem_manager->slabclassid(0, MAX_BLOCK_SIZE);
             options.mem_manager = local_s->mem_manager;
 //            options.thread_id = worker->thread_id_;
