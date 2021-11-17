@@ -204,7 +204,7 @@ namespace rdmaio {
             return res;
         }
 
-        RCQP *destroy_rc_qp(QPIdx idx) {
+        void destroy_rc_qp(QPIdx idx) {
             SCS s;
             uint64_t qid = get_rc_key(idx);
             NOVA_ASSERT(qps_.find(qid) != qps_.end());
@@ -362,7 +362,7 @@ namespace rdmaio {
         /**
          * Using TCP to connect in-coming QP & MR requests
          */
-        void *connection_handler(void) {
+        void *connection_handler() {
             pthread_detach(pthread_self());
             auto listenfd = PreConnector::get_listen_socket(local_ip_,
                                                             tcp_base_port_);
@@ -375,7 +375,7 @@ namespace rdmaio {
                 << "TCP listen error: " << strerror(errno);
             while (running_) {
                 asm volatile("":: : "memory");
-                struct sockaddr_in cli_addr = {0};
+                struct sockaddr_in cli_addr = {};
                 socklen_t clilen = sizeof(cli_addr);
                 auto csfd = accept(listenfd, (struct sockaddr *) &cli_addr,
                                    &clilen);
