@@ -2750,7 +2750,7 @@ namespace leveldb {
                                  const leveldb::Slice &key,
                                  const leveldb::Slice &val) {
         uint64_t last_sequence = versions_->last_sequence_.fetch_add(1);
-        if (processed_writes_ > SUBRANGE_WARMUP_NPUTS &&
+        if (processed_writes_ > SUBRANGE_WARMUP_NPUTS && processed_writes_ < 2*SUBRANGE_WARMUP_NPUTS &&
             processed_writes_ % SUBRANGE_REORG_INTERVAL == 0 &&
             options_.enable_subrange_reorg) {
             // wake up reorg thread.
@@ -3429,6 +3429,10 @@ namespace leveldb {
                                                           &impl->memtable_id_seq_,
                                                           &impl->partitioned_active_memtables_,
                                                           &impl->partitioned_imms_);
+            if (!nova::NovaConfig::config->recover_dbs){
+                impl->subrange_manager_->ConstructSubrangesWithUniform(impl->user_comparator_);
+            }
+
         }
         if (options.enable_range_index) {
             impl->range_index_manager_ = new RangeIndexManager(&impl->scan_stats, impl->versions_,
