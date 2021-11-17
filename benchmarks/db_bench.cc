@@ -1407,15 +1407,17 @@ namespace leveldb {
             std::string value;
             int found = 0;
 //    KeyBuffer key;
-            std::unique_ptr<const char[]> key_guard;
-            Slice key = AllocateKey(&key_guard);
+//            std::unique_ptr<const char[]> key_guard;
+//            Slice key = AllocateKey(&key_guard);
+            char* key_b = new char[10];
             for (int i = 0; i < reads_; i++) {
 //      const int k = thread->rand.Uniform(FLAGS_num*FLAGS_threads);// make it uniform as write.
                 const int k = thread->rand.Next()%(FLAGS_num*FLAGS_threads);
-//
+                size_t len = nova::int_to_str(key_b, k);
+                Slice key =  Slice(key_b, len);
 //            key.Set(k);
 //                GenerateKeyFromInt(k, FLAGS_num, &key);
-                memcpy((void *) key.data(), (void*)(&k), sizeof(int));
+//                memcpy((void *) key.data(), (void*)(&k), sizeof(int));
                 options.hash = k;
 //      if (db_->Get(options, key.slice(), &value).ok()) {
 //        found++;
