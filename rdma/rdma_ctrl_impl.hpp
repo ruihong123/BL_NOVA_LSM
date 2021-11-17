@@ -362,7 +362,7 @@ namespace rdmaio {
         /**
          * Using TCP to connect in-coming QP & MR requests
          */
-        void *connection_handler() {
+        void *connection_handler(void) {
             pthread_detach(pthread_self());
             auto listenfd = PreConnector::get_listen_socket(local_ip_,
                                                             tcp_base_port_);
@@ -472,6 +472,7 @@ namespace rdmaio {
             }
             // end of the server
             close(listenfd);
+            return nullptr;
         }
 
     private:
