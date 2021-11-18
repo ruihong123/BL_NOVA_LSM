@@ -1239,6 +1239,7 @@ namespace leveldb {
         }
         p->mutex.Unlock();
         delete state;
+        return true;
     }
 
     bool DBImpl::CompactMemTable(EnvBGThread *bg_thread,
