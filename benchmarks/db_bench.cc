@@ -548,7 +548,7 @@ namespace leveldb {
         };
 
     }  // namespace
-    void *StartServer(DB **db, LocalServer **local_server) {
+    void StartServer(DB **db, LocalServer **local_server) {
         RdmaCtrl *rdma_ctrl = new RdmaCtrl(NovaConfig::config->my_server_id,
                                            NovaConfig::config->rdma_port);
 //    if (NovaConfig::config->my_server_id < FLAGS_number_of_ltcs) {
@@ -578,7 +578,7 @@ namespace leveldb {
         *local_server = new LocalServer(rdma_ctrl, buf);
         *db =  (*local_server)->Start();
     }
-    void *nova_config_process_code(DB **db, LocalServer **local_server) {
+    void nova_config_process_code(DB **db, LocalServer **local_server) {
 
         int i;
 //    const char **methods = event_get_supported_methods();
