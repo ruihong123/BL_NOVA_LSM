@@ -10,7 +10,8 @@ for ((i=0;i<numServers;i++)); do
    	echo "******************* node-$i ********************"
    	echo "*******************************************"
    	echo "*******************************************"
- 	ssh -oStrictHostKeyChecking=no node-$i "sudo apt-get update && git clone https://github.com/ruihong123/BL_NOVA_LSM && cd BL_NOVA_LSM && bash scripts/bootstrap/env/install-deps.sh && mkdir build && cd build && cmake .. && make db_bench nova_server_main"
+#   	&& git clone https://github.com/ruihong123/BL_NOVA_LSM
+ 	ssh -oStrictHostKeyChecking=no node-$i "sudo apt-get update  && cd BL_NOVA_LSM && bash scripts/bootstrap/env/install-deps.sh && mkdir build && cd build && cmake .. && make db_bench nova_server_main"
 #    ssh -oStrictHostKeyChecking=no node-$i "sudo apt-get --yes install screen && ulimit -n 16384 "
 #    ssh -oStrictHostKeyChecking=no node-$i "ulimit -n 16384"
     #ssh -n -f -oStrictHostKeyChecking=no node-$i screen -L -S env1 -dm "$basedir/scripts/env/setup-all.sh"
