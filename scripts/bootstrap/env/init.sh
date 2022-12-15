@@ -11,7 +11,7 @@ for ((i=0;i<numServers;i++)); do
    	echo "*******************************************"
    	echo "*******************************************"
  	ssh -oStrictHostKeyChecking=no node-$i "sudo apt-get update"
-    ssh -oStrictHostKeyChecking=no node-$i "sudo apt-get --yes install screen && sudo ulimit -n unlimited"
+    ssh -oStrictHostKeyChecking=no node-$i "sudo apt-get --yes install screen && ulimit -n 16384"
     ssh -n -f -oStrictHostKeyChecking=no node-$i screen -L -S env1 -dm "$basedir/scripts/env/setup-all.sh"
 done
 

@@ -5,7 +5,7 @@ REMOTE_HOME="/proj/BG"
 REMOTE_HOME="/proj/bg-PG0"
 setup_script="$REMOTE_HOME/haoyu/scripts/env"
 limit_dir="$REMOTE_HOME/haoyu/scripts"
-LOCAL_HOME="/Users/haoyuh/Documents/PhdUSC/dblab/nova/NovaLSM/scripts/bootstrap"
+LOCAL_HOME="/Users/Ruihong/Documents/PhdUSC/dblab/nova/NovaLSM/scripts/bootstrap"
 
 
 host="Nova.bg-PG0.apt.emulab.net"
