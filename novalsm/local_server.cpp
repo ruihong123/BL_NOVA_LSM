@@ -604,8 +604,9 @@ namespace nova {
 
 
     leveldb::DB * LocalServer::Start() {
-        assert(dbs_[0]!=0);
-        return dbs_[0];
+
+        assert(dbs_[NovaConfig::config->my_server_id]!=0);
+        return dbs_[NovaConfig::config->my_server_id];
     }
 
 
