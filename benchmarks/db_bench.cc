@@ -1331,6 +1331,11 @@ namespace leveldb {
             WriteBatch batch;
             Status s;
             int64_t bytes = 0;
+            Configuration *cfg = NovaConfig::config->cfgs[NovaConfig::config->current_cfg_id];
+            LTCFragment* frag = cfg->fragments[FLAGS_server_id];
+            assert(FLAGS_server_id == frag->ltc_server_id);
+            size_t key_range = frag->range.key_end - frag->range.key_start;
+
 //    KeyBuffer key;
 //            std::unique_ptr<const char[]> key_guard;
 //            Slice key = AllocateKey(&key_guard);
@@ -1340,7 +1345,7 @@ namespace leveldb {
                 for (int j = 0; j < entries_per_batch_; j++) {
                     //The key range should be adjustable.
 //        const int k = seq ? i + j : thread->rand.Uniform(FLAGS_num*FLAGS_threads);
-                    const uint64_t k = seq ? i + j : thread->rand.Next()%(FLAGS_num*FLAGS_threads);
+                    const uint64_t k = seq ? i + j : thread->rand.Next()%(key_range) + frag->range.key_start;
                     size_t len = nova::int_to_str(key_b, k);
                     Slice key =  Slice(key_b, len);
 //        key.Set(k);
@@ -1409,10 +1414,14 @@ namespace leveldb {
 //    KeyBuffer key;
 //            std::unique_ptr<const char[]> key_guard;
 //            Slice key = AllocateKey(&key_guard);
+            Configuration *cfg = NovaConfig::config->cfgs[NovaConfig::config->current_cfg_id];
+            LTCFragment* frag = cfg->fragments[FLAGS_server_id];
+            assert(FLAGS_server_id == frag->ltc_server_id);
+            size_t key_range = frag->range.key_end - frag->range.key_start;
             char* key_b = new char[10];
             for (int i = 0; i < reads_; i++) {
 //      const int k = thread->rand.Uniform(FLAGS_num*FLAGS_threads);// make it uniform as write.
-                const int k = thread->rand.Next()%(FLAGS_num*FLAGS_threads);
+                const int k = thread->rand.Next()%(key_range) + frag->range.key_start;
                 size_t len = nova::int_to_str(key_b, k);
                 Slice key =  Slice(key_b, len);
 //            key.Set(k);
