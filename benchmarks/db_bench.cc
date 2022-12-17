@@ -1345,7 +1345,7 @@ namespace leveldb {
                 for (int j = 0; j < entries_per_batch_; j++) {
                     //The key range should be adjustable.
 //        const int k = seq ? i + j : thread->rand.Uniform(FLAGS_num*FLAGS_threads);
-                    const uint64_t k = seq ? i + j : thread->rand.Next()%(key_range) + frag->range.key_start;
+                    const uint64_t k = seq ? i + j : (thread->rand.Next()%(key_range) + frag->range.key_start);
                     size_t len = nova::int_to_str(key_b, k);
                     Slice key =  Slice(key_b, len);
 //        key.Set(k);
