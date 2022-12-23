@@ -12,7 +12,7 @@ for ((i=0;i<numServers;i++)); do
    	echo "*******************************************"
 #
  	#ssh -oStrictHostKeyChecking=no node-$i "sudo apt-get update && sudo apt install htop -y && cd /users/Ruihong && git clone https://github.com/ruihong123/BL_NOVA_LSM && cd BL_NOVA_LSM && bash scripts/bootstrap/env/install-deps.sh && mkdir build && cd build &&  cmake -DCMAKE_BUILD_TYPE=Release .. && make db_bench nova_server_main -j"
- 	ssh -oStrictHostKeyChecking=no node-$i "cd /users/Ruihong && cd BL_NOVA_LSM && cd build && git pull &&  cmake -DCMAKE_BUILD_TYPE=Release .. && make db_bench nova_server_main -j"
+ 	ssh -oStrictHostKeyChecking=no node-$i "cd /users/Ruihong && cd BL_NOVA_LSM && cd build && git pull &&  cmake -DCMAKE_BUILD_TYPE=Release .. && make db_bench nova_server_main -j &"
 
 #    ssh -oStrictHostKeyChecking=no node-$i "sudo apt-get --yes install screen && ulimit -n 16384 "
 #    ssh -oStrictHostKeyChecking=no node-$i "ulimit -n 16384"
