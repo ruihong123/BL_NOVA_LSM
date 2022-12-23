@@ -11,6 +11,7 @@ namespace nova {
         NOVA_LOG(rdmaio::INFO)
             << fmt::format("admission add request {}:{}:{}", server_id,
                            requests, pending_rdma_sends_[server_id]);
+        std::lock_guard<std::mutex> l(message_mtx[server_id]);
         pending_rdma_sends_[server_id] += requests;
     }
 
@@ -19,6 +20,7 @@ namespace nova {
             << fmt::format("admission remove request {}:{}:{}", server_id,
                            requests, pending_rdma_sends_[server_id]);
         NOVA_ASSERT(pending_rdma_sends_[server_id] >= requests);
+        std::lock_guard<std::mutex> l(message_mtx[server_id]);
         pending_rdma_sends_[server_id] -= requests;
     }
 

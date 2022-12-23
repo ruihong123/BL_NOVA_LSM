@@ -131,8 +131,8 @@ namespace leveldb {
             }
             NOVA_LOG(rdmaio::DEBUG)
                 << fmt::format(
-                        "!!!!!!!!!!!!!!!!!!!!! CompactMemTable tid:{} alloc_size:{} nentries:{} "
-                        "nblocks:{}, total_kv_num:{}, dropped_num{}",
+                        "!!!!!!!!!!!!!!!!!!!!! CompactMemTable tid:{} alloc_size:{} nentries:{} " // , total_kv_num:{}, dropped_num{}
+                        "nblocks:{}",
                         bg_thread->thread_id(), options.max_stoc_file_size,
                         builder->NumEntries(),
                         builder->NumDataBlocks()); //, total_kv_num, dropped_num);
