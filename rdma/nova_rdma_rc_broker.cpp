@@ -258,7 +258,7 @@ namespace nova {
                 << ibv_wc_status_str(wcs_[i].status) << " serverid "
                 << server_id;
 
-            NOVA_LOG(DEBUG) << fmt::format(
+            NOVA_LOG(INFO) << fmt::format(
                         "rdma-rc[{}]: SQ: poll complete from server {} wr:{} op:{}",
                         thread_id_, server_id, wcs_[i].wr_id,
                         ibv_wc_opcode_str(wcs_[i].opcode));
