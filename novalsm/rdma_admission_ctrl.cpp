@@ -8,7 +8,7 @@
 
 namespace nova {
     void RDMAAdmissionCtrl::AddRequests(int server_id, int requests) {
-        NOVA_LOG(rdmaio::INFO)
+        NOVA_LOG(rdmaio::DEBUG)
             << fmt::format("admission add request {}:{}:{}", server_id,
                            requests, pending_rdma_sends_[server_id]);
 //        std::unique_lock<std::mutex> l(message_mtx[server_id]);
@@ -16,7 +16,7 @@ namespace nova {
     }
 
     void RDMAAdmissionCtrl::RemoveRequests(int server_id, int requests) {
-        NOVA_LOG(rdmaio::INFO)
+        NOVA_LOG(rdmaio::DEBUG)
             << fmt::format("admission remove request {}:{}:{},", server_id,
                            requests, pending_rdma_sends_[server_id]);
 //        NOVA_ASSERT(pending_rdma_sends_[server_id] >= requests);
