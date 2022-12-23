@@ -8,14 +8,14 @@
 
 namespace nova {
     void RDMAAdmissionCtrl::AddRequests(int server_id, int requests) {
-        NOVA_LOG(rdmaio::DEBUG)
+        NOVA_LOG(rdmaio::INFO)
             << fmt::format("admission add request {}:{}:{}", server_id,
                            requests, pending_rdma_sends_[server_id]);
         pending_rdma_sends_[server_id] += requests;
     }
 
     void RDMAAdmissionCtrl::RemoveRequests(int server_id, int requests) {
-        NOVA_LOG(rdmaio::DEBUG)
+        NOVA_LOG(rdmaio::INFO)
             << fmt::format("admission remove request {}:{}:{}", server_id,
                            requests, pending_rdma_sends_[server_id]);
         NOVA_ASSERT(pending_rdma_sends_[server_id] >= requests);
