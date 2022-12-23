@@ -14,6 +14,7 @@ namespace nova {
     public:
         RDMAAdmissionCtrl() : max_pending_rdma_requests_per_endpoint_(
                 NovaConfig::config->rdma_max_num_sends) {
+            assert(NovaConfig::config->servers.size() == 16);
             pending_rdma_sends_ = new int[NovaConfig::config->servers.size()];
             message_mtx = new std::mutex[NovaConfig::config->servers.size()];
             for (int i = 0; i < NovaConfig::config->servers.size(); i++) {
